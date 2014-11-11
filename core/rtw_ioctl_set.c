@@ -1450,7 +1450,7 @@ int rtw_set_channel_plan(_adapter *adapter, u8 channel_plan)
 	struct mlme_priv *pmlmepriv = &adapter->mlmepriv;
 
 	//handle by cmd_thread to sync with scan operation
-	return rtw_set_chplan_cmd(adapter, channel_plan, 1);
+	return rtw_set_chplan_cmd(adapter, channel_plan, 1, 1);
 }
 
 /*

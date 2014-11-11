@@ -1660,7 +1660,7 @@ inline void rtw_lock_ext_suspend_timeout(u32 timeout_ms)
 	#elif defined(CONFIG_ANDROID_POWER)
 	android_lock_suspend_auto_expire(&rtw_suspend_ext_lock, rtw_ms_to_systime(timeout_ms));
 	#endif
-	DBG_871X("EXT lock timeout:%d\n", timeout_ms);
+	//DBG_871X("EXT lock timeout:%d\n", timeout_ms);
 }
 
 inline void rtw_lock_rx_suspend_timeout(u32 timeout_ms)
@@ -1670,7 +1670,7 @@ inline void rtw_lock_rx_suspend_timeout(u32 timeout_ms)
 	#elif defined(CONFIG_ANDROID_POWER)
 	android_lock_suspend_auto_expire(&rtw_suspend_rx_lock, rtw_ms_to_systime(timeout_ms));
 	#endif
-	DBG_871X("RX lock timeout:%d\n", timeout_ms);
+	//DBG_871X("RX lock timeout:%d\n", timeout_ms);
 }
 
 
@@ -1681,7 +1681,7 @@ inline void rtw_lock_traffic_suspend_timeout(u32 timeout_ms)
 	#elif defined(CONFIG_ANDROID_POWER)
 	android_lock_suspend_auto_expire(&rtw_suspend_traffic_lock, rtw_ms_to_systime(timeout_ms));
 	#endif
-	DBG_871X("traffic lock timeout:%d\n", timeout_ms);
+	//DBG_871X("traffic lock timeout:%d\n", timeout_ms);
 }
 
 inline void rtw_lock_resume_scan_timeout(u32 timeout_ms)
@@ -1691,7 +1691,7 @@ inline void rtw_lock_resume_scan_timeout(u32 timeout_ms)
 	#elif defined(CONFIG_ANDROID_POWER)
 	android_lock_suspend_auto_expire(&rtw_resume_scan_lock, rtw_ms_to_systime(timeout_ms));
 	#endif
-	DBG_871X("resume scan lock:%d\n", timeout_ms);
+	//DBG_871X("resume scan lock:%d\n", timeout_ms);
 }
 
 inline void rtw_lock_alloc_xmitbuf_timeout(u32 timeout_ms)

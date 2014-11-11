@@ -1667,7 +1667,7 @@ sint validate_recv_ctrl_frame(_adapter *padapter, union recv_frame *precv_frame)
 
 					//upate BCN for TIM IE
 					//update_BCNTIM(padapter);
-					update_beacon(padapter, _TIM_IE_, NULL, _FALSE);
+					update_beacon(padapter, _TIM_IE_, NULL, _TRUE);
 				}
 
 				//_exit_critical_bh(&psta->sleep_q.lock, &irqL);
@@ -1699,7 +1699,7 @@ sint validate_recv_ctrl_frame(_adapter *padapter, union recv_frame *precv_frame)
 
 					//upate BCN for TIM IE
 					//update_BCNTIM(padapter);
-					update_beacon(padapter, _TIM_IE_, NULL, _FALSE);
+					update_beacon(padapter, _TIM_IE_, NULL, _TRUE);
 				}
 
 			}
@@ -3517,24 +3517,22 @@ int recv_func_prehandle(_adapter *padapter, union recv_frame *rframe)
 
 #ifdef CONFIG_MP_INCLUDED
 	struct mlme_priv *pmlmepriv = &padapter->mlmepriv;
-#endif //CONFIG_MP_INCLUDED
 
-#ifdef CONFIG_MP_INCLUDED
 	if (padapter->registrypriv.mp_mode == 1)
 	{
 		if ((check_fwstate(pmlmepriv, WIFI_MP_STATE) == _TRUE))//&&(padapter->mppriv.check_mp_pkt == 0))
 		{
-		if (pattrib->crc_err == 1)
-			padapter->mppriv.rx_crcerrpktcount++;
-		else
-			padapter->mppriv.rx_pktcount++;
+			if (pattrib->crc_err == 1)
+				padapter->mppriv.rx_crcerrpktcount++;
+			else
+				padapter->mppriv.rx_pktcount++;
 
-		if (check_fwstate(pmlmepriv, WIFI_MP_LPBK_STATE) == _FALSE) {
-			//RT_TRACE(_module_rtl871x_recv_c_, _drv_alert_, ("MP - Not in loopback mode , drop pkt \n"));
-			ret = _FAIL;
-			rtw_free_recvframe(rframe, pfree_recv_queue);//free this recv_frame
-			goto exit;
-		}
+			if (check_fwstate(pmlmepriv, WIFI_MP_LPBK_STATE) == _FALSE) {
+				//RT_TRACE(_module_rtl871x_recv_c_, _drv_alert_, ("MP - Not in loopback mode , drop pkt \n"));
+				ret = _FAIL;
+				rtw_free_recvframe(rframe, pfree_recv_queue);//free this recv_frame
+				goto exit;
+			}
 		}
 	}
 #endif

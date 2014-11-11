@@ -98,6 +98,7 @@ typedef enum _RT_SPINLOCK_TYPE{
 	RT_IQK_SPINLOCK = 38,
 	RT_PENDED_OID_SPINLOCK = 39,
 	RT_CHNLLIST_SPINLOCK = 40,
+	RT_INDIC_SPINLOCK = 41,	//protect indication
 }RT_SPINLOCK_TYPE;
 
 #endif
@@ -256,6 +257,7 @@ typedef enum _RT_SPINLOCK_TYPE{
 	#define	USE_WORKITEM 0
 	#define 	FOR_BRAZIL_PRETEST 0
 	#define   FPGA_TWO_MAC_VERIFICATION	0
+	#define	RTL8881A_SUPPORT	0
 #endif
 
 

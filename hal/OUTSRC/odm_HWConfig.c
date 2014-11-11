@@ -29,7 +29,7 @@
 #define READ_AND_CONFIG_TC(ic, txt) (ODM_ReadAndConfig_TC_##ic##txt(pDM_Odm))
 
 
-#if (TEST_CHIP_SUPPORT == 1)
+#if (TESTCHIP_SUPPORT == 1)
 #define READ_AND_CONFIG(ic, txt) do {\
                                             if (pDM_Odm->bIsMPChip)\
 						    READ_AND_CONFIG_MP(ic,txt);\
@@ -44,7 +44,7 @@
 #define READ_FIRMWARE_MP(ic, txt) 		(ODM_ReadFirmware_MP_##ic##txt(pDM_Odm, pFirmware, pSize))
 #define READ_FIRMWARE_TC(ic, txt) 		(ODM_ReadFirmware_TC_##ic##txt(pDM_Odm, pFirmware, pSize))
 
-#if (TEST_CHIP_SUPPORT == 1)
+#if (TESTCHIP_SUPPORT == 1)
 #define READ_FIRMWARE(ic, txt) do {\
 						if (pDM_Odm->bIsMPChip)\
 							READ_FIRMWARE_MP(ic,txt);\
@@ -54,6 +54,17 @@
 #else
 #define READ_FIRMWARE     READ_FIRMWARE_MP
 #endif
+
+#define GET_VERSION_MP(ic, txt) 		(ODM_GetVersion_MP_##ic##txt())
+#define GET_VERSION_TC(ic, txt) 		(ODM_GetVersion_TC_##ic##txt())
+
+#define GET_VERSION(ic, txt) do {\
+							if (pDM_Odm->bIsMPChip)\
+								GET_VERSION_MP(ic,txt);\
+							else\
+								GET_VERSION_TC(ic,txt);\
+						} while(0)
+
 
 u1Byte
 odm_QueryRxPwrPercentage(
@@ -639,7 +650,7 @@ odm_RxPhyStatus92CSeries_Parsing(
 	u1Byte				LNA_idx, VGA_idx;
 	PPHY_STATUS_RPT_8192CD_T pPhyStaRpt = (PPHY_STATUS_RPT_8192CD_T)pPhyStatus;
 
-	isCCKrate = (pPktinfo->DataRate <= DESC92C_RATE11M)?TRUE :FALSE;
+	isCCKrate = (pPktinfo->DataRate <= DESC_RATE11M)?TRUE :FALSE;
 	pPhyInfo->RxMIMOSignalQuality[ODM_RF_PATH_A] = -1;
 	pPhyInfo->RxMIMOSignalQuality[ODM_RF_PATH_B] = -1;
 
@@ -950,7 +961,7 @@ odm_RxPhyStatus92CSeries_Parsing(
 			//
 			// (3)EVM of HT rate
 			//
-			if(pPktinfo->DataRate >=DESC92C_RATEMCS8 && pPktinfo->DataRate <=DESC92C_RATEMCS15)
+			if(pPktinfo->DataRate >=DESC_RATEMCS8 && pPktinfo->DataRate <=DESC_RATEMCS15)
 				Max_spatial_stream = 2; //both spatial stream make sense
 			else
 				Max_spatial_stream = 1; //only spatial stream 1 makes sense
@@ -1504,7 +1515,7 @@ odm_Process_RSSIForDM(
 	if(pPktinfo->bPacketBeacon)
 		pDM_Odm->PhyDbgInfo.NumQryBeaconPkt++;
 
-	isCCKrate = (pPktinfo->DataRate <= DESC92C_RATE11M)?TRUE :FALSE;
+	isCCKrate = (pPktinfo->DataRate <= DESC_RATE11M)?TRUE :FALSE;
 	pDM_Odm->RxRate = pPktinfo->DataRate;
 	/*
 	if(!isCCKrate)
@@ -1893,6 +1904,17 @@ ODM_ConfigRFWithHeaderFile(
 	}
 #endif
 
+#if (RTL8813A_SUPPORT == 1)
+	if (pDM_Odm->SupportICType == ODM_RTL8813A)
+	{
+		/*
+		if(ConfigType == CONFIG_RF_TXPWR_LMT) {
+			READ_AND_CONFIG(8813A,_TXPWR_LMT);
+		}
+		*/
+	}
+#endif
+
 	return HAL_STATUS_SUCCESS;
 }
 
@@ -1906,8 +1928,12 @@ ODM_ConfigRFWithTxPwrTrackHeaderFile(
 	ODM_RT_TRACE(pDM_Odm, ODM_COMP_INIT, ODM_DBG_LOUD,
 				 ("pDM_Odm->SupportPlatform: 0x%X, pDM_Odm->SupportInterface: 0x%X, pDM_Odm->BoardType: 0x%X\n",
 				 pDM_Odm->SupportPlatform, pDM_Odm->SupportInterface, pDM_Odm->BoardType));
+
+	if(0)
+	{
+	}
 #if (RTL8821A_SUPPORT == 1)
-	if (pDM_Odm->SupportICType == ODM_RTL8821)
+	else if(pDM_Odm->SupportICType == ODM_RTL8821)
 	{
 		if (pDM_Odm->SupportInterface == ODM_ITRF_PCIE)
 			READ_AND_CONFIG(8821A,_TxPowerTrack_PCIE);
@@ -1916,7 +1942,7 @@ ODM_ConfigRFWithTxPwrTrackHeaderFile(
 	}
 #endif
 #if (RTL8812A_SUPPORT == 1)
-	if (pDM_Odm->SupportICType == ODM_RTL8812)
+	else if(pDM_Odm->SupportICType == ODM_RTL8812)
 	{
 		if (pDM_Odm->SupportInterface == ODM_ITRF_PCIE)
 			READ_AND_CONFIG(8812A,_TxPowerTrack_PCIE);
@@ -1930,7 +1956,7 @@ ODM_ConfigRFWithTxPwrTrackHeaderFile(
 	}
 #endif
 #if (RTL8192E_SUPPORT == 1)
-	if(pDM_Odm->SupportICType == ODM_RTL8192E)
+	else if(pDM_Odm->SupportICType == ODM_RTL8192E)
 	{
 		if (pDM_Odm->SupportInterface == ODM_ITRF_PCIE)
 			READ_AND_CONFIG(8192E,_TxPowerTrack_PCIE);
@@ -1939,7 +1965,7 @@ ODM_ConfigRFWithTxPwrTrackHeaderFile(
 	}
 #endif
 #if RTL8723B_SUPPORT
-	if(pDM_Odm->SupportICType == ODM_RTL8723B)
+	else if(pDM_Odm->SupportICType == ODM_RTL8723B)
 	{
 		if (pDM_Odm->SupportInterface == ODM_ITRF_PCIE)
 			READ_AND_CONFIG(8723B,_TxPowerTrack_PCIE);
@@ -1950,7 +1976,7 @@ ODM_ConfigRFWithTxPwrTrackHeaderFile(
 	}
 #endif
 #if RTL8188E_SUPPORT
-	if(pDM_Odm->SupportICType == ODM_RTL8188E)
+	else if(pDM_Odm->SupportICType == ODM_RTL8188E)
 	{
 		if (pDM_Odm->SupportInterface == ODM_ITRF_PCIE)
 			READ_AND_CONFIG(8188E,_TxPowerTrack_PCIE);
@@ -1968,9 +1994,11 @@ ODM_ConfigBBWithHeaderFile(
 	IN 	ODM_BB_Config_Type 		ConfigType
 	)
 {
+#if (DM_ODM_SUPPORT_TYPE & (ODM_CE|ODM_WIN))
 	PADAPTER		Adapter = pDM_Odm->Adapter;
 #if (DM_ODM_SUPPORT_TYPE &  ODM_WIN)
 	PMGNT_INFO		pMgntInfo = &(Adapter->MgntInfo);
+#endif
 #endif
 
 	ODM_RT_TRACE(pDM_Odm, ODM_COMP_INIT, ODM_DBG_LOUD,
@@ -1978,6 +2006,7 @@ ODM_ConfigBBWithHeaderFile(
     ODM_RT_TRACE(pDM_Odm, ODM_COMP_INIT, ODM_DBG_LOUD,
 				("pDM_Odm->SupportPlatform: 0x%X, pDM_Odm->SupportInterface: 0x%X, pDM_Odm->BoardType: 0x%X\n",
 				pDM_Odm->SupportPlatform, pDM_Odm->SupportInterface, pDM_Odm->BoardType));
+
 #if (RTL8723A_SUPPORT == 1)
     if(pDM_Odm->SupportICType == ODM_RTL8723A)
 	{
@@ -1995,7 +2024,6 @@ ODM_ConfigBBWithHeaderFile(
 #if (RTL8188E_SUPPORT == 1)
     if(pDM_Odm->SupportICType == ODM_RTL8188E)
 	{
-
 		if(ConfigType == CONFIG_BB_PHY_REG)
 		{
 			if(IS_VENDOR_8188E_I_CUT_SERIES(Adapter))
@@ -2050,8 +2078,6 @@ ODM_ConfigBBWithHeaderFile(
 			else if (100 <= *pDM_Odm->pChannel)
 				AGC_DIFF_CONFIG_MP(8812A,HB);
 		}
-		ODM_RT_TRACE(pDM_Odm,ODM_COMP_INIT, ODM_DBG_LOUD, (" ===> phy_ConfigBBWithHeaderFile() phy:Rtl8812AGCTABArray\n"));
-		ODM_RT_TRACE(pDM_Odm,ODM_COMP_INIT, ODM_DBG_LOUD, (" ===> phy_ConfigBBWithHeaderFile() agc:Rtl8812PHY_REGArray\n"));
 	}
 #endif
 
@@ -2070,8 +2096,6 @@ ODM_ConfigBBWithHeaderFile(
 		{
 			READ_AND_CONFIG(8821A,_PHY_REG_PG);
 		}
-		ODM_RT_TRACE(pDM_Odm,ODM_COMP_INIT, ODM_DBG_LOUD, (" ===> phy_ConfigBBWithHeaderFile() phy:Rtl8821AGCTABArray\n"));
-		ODM_RT_TRACE(pDM_Odm,ODM_COMP_INIT, ODM_DBG_LOUD, (" ===> phy_ConfigBBWithHeaderFile() agc:Rtl8821PHY_REGArray\n"));
 	}
 #endif
 #if (RTL8723B_SUPPORT == 1)
@@ -2110,6 +2134,24 @@ ODM_ConfigBBWithHeaderFile(
 		}
 	}
 #endif
+#if (RTL8813A_SUPPORT == 1)
+    if(pDM_Odm->SupportICType == ODM_RTL8813A)
+	{
+
+		if(ConfigType == CONFIG_BB_PHY_REG)
+		{
+			READ_AND_CONFIG(8813A,_PHY_REG);
+		}
+		else if(ConfigType == CONFIG_BB_AGC_TAB)
+		{
+			READ_AND_CONFIG(8813A,_AGC_TAB);
+		}
+		else if(ConfigType == CONFIG_BB_PHY_REG_PG)
+		{
+			//READ_AND_CONFIG(8813A,_PHY_REG_PG);
+		}
+	}
+#endif
 	return HAL_STATUS_SUCCESS;
 }
 
@@ -2118,7 +2160,9 @@ ODM_ConfigMACWithHeaderFile(
 	IN 	PDM_ODM_T	pDM_Odm
 	)
 {
+#if (DM_ODM_SUPPORT_TYPE &  (ODM_CE|ODM_WIN))
 	PADAPTER		Adapter = pDM_Odm->Adapter;
+#endif
 	u1Byte result = HAL_STATUS_SUCCESS;
 
 	ODM_RT_TRACE(pDM_Odm, ODM_COMP_INIT, ODM_DBG_LOUD,
@@ -2186,11 +2230,19 @@ ODM_ConfigFWWithHeaderFile(
 	{
 		if (ConfigType == CONFIG_FW_NIC)
 		{
-			READ_FIRMWARE(8188E,_FW_NIC);
+			READ_FIRMWARE(8188E,_FW_NIC_T);
 		}
 		else if (ConfigType == CONFIG_FW_WoWLAN)
 		{
-			READ_FIRMWARE(8188E,_FW_WoWLAN);
+			READ_FIRMWARE(8188E,_FW_WoWLAN_T);
+		}
+		else if(ConfigType == CONFIG_FW_NIC_2)
+		{
+			READ_FIRMWARE(8188E,_FW_NIC_S);
+		}
+		else if (ConfigType == CONFIG_FW_WoWLAN_2)
+		{
+			READ_FIRMWARE(8188E,_FW_WoWLAN_S);
 		}
 	}
 #endif
@@ -2263,4 +2315,19 @@ ODM_ConfigFWWithHeaderFile(
 	}
 #endif
 	return HAL_STATUS_SUCCESS;
+}
+
+
+u4Byte
+ODM_GetHWImgVersion(
+	IN	PDM_ODM_T	pDM_Odm
+	)
+{
+
+#if (RTL8812A_SUPPORT == 1)
+	if (pDM_Odm->SupportICType == ODM_RTL8812)
+		return GET_VERSION_MP(8812A,_MAC_REG);
+#endif
+
+	return 0;
 }

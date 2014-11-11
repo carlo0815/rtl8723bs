@@ -58,13 +58,16 @@ ODM_UpdateRxIdleAnt(IN PDM_ODM_T pDM_Odm, IN u1Byte Ant)
 {
 	pFAT_T	pDM_FatTable = &pDM_Odm->DM_FatTable;
 	u4Byte	DefaultAnt, OptionalAnt,value32;
+
+	#if (DM_ODM_SUPPORT_TYPE & (ODM_CE|ODM_WIN))
 	PADAPTER 		pAdapter = pDM_Odm->Adapter;
 	HAL_DATA_TYPE	*pHalData = GET_HAL_DATA(pAdapter);
+	#endif
 
-	pDM_FatTable->RxIdleAnt = Ant;
 	if(pDM_FatTable->RxIdleAnt != Ant)
 	{
 		ODM_RT_TRACE(pDM_Odm,ODM_COMP_ANT_DIV, ODM_DBG_LOUD, ("[ Update Rx-Idle-Ant ] RxIdleAnt =%s\n",(Ant==MAIN_ANT)?"MAIN_ANT":"AUX_ANT"));
+		pDM_FatTable->RxIdleAnt = Ant;
 
 		if(Ant == MAIN_ANT)
 		{
@@ -111,8 +114,10 @@ ODM_UpdateRxIdleAnt(IN PDM_ODM_T pDM_Odm, IN u1Byte Ant)
 		ODM_SetMACReg(pDM_Odm, 0x6D8 , BIT10|BIT9|BIT8, DefaultAnt);	//PathA Resp Tx
 	}
 	else// pDM_FatTable->RxIdleAnt == Ant
+	{
 		ODM_RT_TRACE(pDM_Odm,ODM_COMP_ANT_DIV, ODM_DBG_LOUD, ("[ Stay in Ori-Ant ]  RxIdleAnt =%s\n",(Ant==MAIN_ANT)?"MAIN_ANT":"AUX_ANT"));
-
+		pDM_FatTable->RxIdleAnt = Ant;
+	}
 }
 
 
@@ -431,17 +436,7 @@ odm_Smart_HWAntDiv_Init_92E(
 	IN		PDM_ODM_T		pDM_Odm
 )
 {
-	u4Byte	value32, i;
-	pFAT_T	pDM_FatTable = &pDM_Odm->DM_FatTable;
-	u4Byte	AntCombination = 2;
-
     ODM_RT_TRACE(pDM_Odm,ODM_COMP_ANT_DIV, ODM_DBG_LOUD, ("***8188E AntDiv_Init =>  AntDivType=[CG_TRX_SMART_ANTDIV]\n"));
-
-
-
-
-
-
 }
 #endif //#if (RTL8192E_SUPPORT == 1)
 
@@ -691,8 +686,6 @@ odm_S0S1_SWAntDiv_Init_8821A(
 }
 #endif //#if (RTL8821A_SUPPORT == 1)
 
-#define RTL8881A_SUPPORT	0
-
 #if (RTL8881A_SUPPORT == 1)
 VOID
 odm_RX_HWAntDiv_Init_8881A(
@@ -794,7 +787,7 @@ odm_HW_AntDiv(
 	IN		PDM_ODM_T		pDM_Odm
 )
 {
-	u4Byte	i,MinMaxRSSI=0xFF, MinRSSI=0xFF, AntDivMaxRSSI=0, MaxRSSI=0, LocalMinRSSI, LocalMaxRSSI;
+	u4Byte	i,MinMaxRSSI=0xFF, AntDivMaxRSSI=0, MaxRSSI=0, LocalMaxRSSI;
 	u4Byte	Main_RSSI, Aux_RSSI, pkt_ratio_m=0, pkt_ratio_a=0,pkt_threshold=10;
 	u1Byte	RxIdleAnt=0, TargetAnt=7;
 	pFAT_T	pDM_FatTable = &pDM_Odm->DM_FatTable;
@@ -958,11 +951,12 @@ odm_S0S1_SwAntDiv(
 	u4Byte			Main_RSSI, Aux_RSSI;
 	u1Byte			reset_period=10, SWAntDiv_threshold=35;
 	u1Byte			HighTraffic_TrainTime_U=0x32,HighTraffic_TrainTime_L,Train_time_temp;
+	u1Byte			LowTraffic_TrainTime_U=200,LowTraffic_TrainTime_L;
 	u1Byte			RxIdleAnt, TargetAnt, nextAnt;
 	pSWAT_T			pDM_SWAT_Table = &pDM_Odm->DM_SWAT_Table;
 	pFAT_T			pDM_FatTable = &pDM_Odm->DM_FatTable;
 	PSTA_INFO_T		pEntry=NULL;
-	static u1Byte		reset_idx;
+	//static u1Byte		reset_idx;
 	u4Byte			value32;
 	PADAPTER		Adapter	 =  pDM_Odm->Adapter;
 	u8Byte			curTxOkCnt=0, curRxOkCnt=0,TxCntOffset, RxCntOffset;
@@ -1075,7 +1069,7 @@ odm_S0S1_SwAntDiv(
 				}
 
 
-				ODM_RT_TRACE(pDM_Odm,ODM_COMP_ANT_DIV, ODM_DBG_LOUD, ("*** Train_time_temp = ((%d))\n",Train_time_temp));
+				//ODM_RT_TRACE(pDM_Odm,ODM_COMP_ANT_DIV, ODM_DBG_LOUD, ("*** Train_time_temp = ((%d))\n",Train_time_temp));
 
 				//--
 				if(Train_time_temp > HighTraffic_TrainTime_U)
@@ -1087,28 +1081,68 @@ odm_S0S1_SwAntDiv(
 				pDM_SWAT_Table->Train_time = Train_time_temp; //50ms~10ms
 
 				ODM_RT_TRACE(pDM_Odm, ODM_COMP_ANT_DIV, ODM_DBG_LOUD,("  Train_time_flag=((%d)) , Train_time=((%d)) \n",pDM_SWAT_Table->Train_time_flag, pDM_SWAT_Table->Train_time));
+				ODM_RT_TRACE(pDM_Odm, ODM_COMP_ANT_DIV, ODM_DBG_LOUD, ("  [HIGH Traffic]  \n" ));
+			}
+			else if (curTxOkCnt > 125000 || curRxOkCnt > 125000) // ( 0.125M * 8bit ) / 2 =  0.5M bits /sec )
+			{
+				pDM_SWAT_Table->TrafficLoad = TRAFFIC_LOW;
+				Train_time_temp=pDM_SWAT_Table->Train_time ;
 
+				if(pDM_SWAT_Table->Train_time_flag==3)
+				{
+					LowTraffic_TrainTime_L=10;
+					if(Train_time_temp<50)
+						Train_time_temp=LowTraffic_TrainTime_L;
+					else
+						Train_time_temp-=50;
+				}
+				else if(pDM_SWAT_Table->Train_time_flag==2)
+				{
+					Train_time_temp-=30;
+					LowTraffic_TrainTime_L=36;
+				}
+				else if(pDM_SWAT_Table->Train_time_flag==1)
+				{
+					Train_time_temp-=10;
+					LowTraffic_TrainTime_L=40;
+				}
+				else
+					Train_time_temp+=10;
+
+				//--
+				if(Train_time_temp >= LowTraffic_TrainTime_U)
+					Train_time_temp=LowTraffic_TrainTime_U;
+
+				else if(Train_time_temp <= LowTraffic_TrainTime_L)
+					Train_time_temp=LowTraffic_TrainTime_L;
+
+				pDM_SWAT_Table->Train_time = Train_time_temp; //50ms~20ms
+
+				ODM_RT_TRACE(pDM_Odm, ODM_COMP_ANT_DIV, ODM_DBG_LOUD,("  Train_time_flag=((%d)) , Train_time=((%d)) \n",pDM_SWAT_Table->Train_time_flag, pDM_SWAT_Table->Train_time));
+				ODM_RT_TRACE(pDM_Odm, ODM_COMP_ANT_DIV, ODM_DBG_LOUD, ("  [Low Traffic]  \n" ));
 			}
 			else
 			{
-				pDM_SWAT_Table->TrafficLoad = TRAFFIC_LOW;
+				pDM_SWAT_Table->TrafficLoad = TRAFFIC_UltraLOW;
 				pDM_SWAT_Table->Train_time = 0xc8; //200ms
+				ODM_RT_TRACE(pDM_Odm, ODM_COMP_ANT_DIV, ODM_DBG_LOUD, ("  [Ultra-Low Traffic]  \n" ));
 			}
-			ODM_RT_TRACE(pDM_Odm, ODM_COMP_ANT_DIV, ODM_DBG_LOUD, ("TxOkCnt=(( %llu )), RxOkCnt=(( %llu )) :  [ %s  Traffic]  \n",
-				curTxOkCnt ,curRxOkCnt , (pDM_SWAT_Table->TrafficLoad == TRAFFIC_HIGH?"High":"Low")));
+			ODM_RT_TRACE(pDM_Odm, ODM_COMP_ANT_DIV, ODM_DBG_LOUD, ("TxOkCnt=(( %llu )), RxOkCnt=(( %llu )) \n",
+				curTxOkCnt ,curRxOkCnt ));
 
 			//-----------------
 
 			ODM_RT_TRACE(pDM_Odm, ODM_COMP_ANT_DIV, ODM_DBG_LOUD,(" Current MinMaxRSSI is ((%d)) \n",pDM_FatTable->MinMaxRSSI));
 
                         //---reset index---
-			if(reset_idx>=reset_period)
+			if(pDM_SWAT_Table->reset_idx>=reset_period)
 			{
 				pDM_FatTable->MinMaxRSSI=0; //
-				reset_idx=0;
+				pDM_SWAT_Table->reset_idx=0;
 			}
-				ODM_RT_TRACE(pDM_Odm, ODM_COMP_ANT_DIV, ODM_DBG_LOUD,("reset_idx=%d\n",reset_idx));
-				reset_idx++;
+			ODM_RT_TRACE(pDM_Odm, ODM_COMP_ANT_DIV, ODM_DBG_LOUD, ("reset_idx = (( %d )) \n",pDM_SWAT_Table->reset_idx ));
+			//ODM_RT_TRACE(pDM_Odm, ODM_COMP_ANT_DIV, ODM_DBG_LOUD,("reset_idx=%d\n",pDM_SWAT_Table->reset_idx));
+			pDM_SWAT_Table->reset_idx++;
 
 			//---double check flag---
 			if(pDM_FatTable->MinMaxRSSI > SWAntDiv_threshold && pDM_SWAT_Table->Double_chk_flag== 0)
@@ -1130,7 +1164,7 @@ odm_S0S1_SwAntDiv(
 
 			pDM_SWAT_Table->try_flag = 1;
 
-			if(reset_idx<=1)
+			if(pDM_SWAT_Table->reset_idx<=1)
 				pDM_SWAT_Table->RSSI_Trying = 2;
 			else
 				pDM_SWAT_Table->RSSI_Trying = 1;
@@ -1182,7 +1216,7 @@ odm_S0S1_SwAntDiv(
 							MinMaxRSSI = LocalMaxRSSI;
 							ODM_RT_TRACE(pDM_Odm,ODM_COMP_ANT_DIV, ODM_DBG_LOUD, ("*** LocalMaxRSSI-LocalMinRSSI = ((%d))\n",(LocalMaxRSSI-LocalMinRSSI)));
 
-							if((LocalMaxRSSI-LocalMinRSSI)>=8)
+							if((LocalMaxRSSI-LocalMinRSSI)>8)
 							{
 								if(LocalMinRSSI != 0)
 									pDM_SWAT_Table->Train_time_flag=3;
@@ -1194,9 +1228,9 @@ odm_S0S1_SwAntDiv(
 										pDM_SWAT_Table->Train_time_flag=3;
 								}
 							}
-							else if((LocalMaxRSSI-LocalMinRSSI)>=5)
+							else if((LocalMaxRSSI-LocalMinRSSI)>5)
 								pDM_SWAT_Table->Train_time_flag=2;
-							else if((LocalMaxRSSI-LocalMinRSSI)>=3)
+							else if((LocalMaxRSSI-LocalMinRSSI)>2)
 								pDM_SWAT_Table->Train_time_flag=1;
 							else
 								pDM_SWAT_Table->Train_time_flag=0;
@@ -1245,7 +1279,7 @@ odm_S0S1_SwAntDiv(
 
 					nextAnt = (pDM_FatTable->RxIdleAnt  == MAIN_ANT)? AUX_ANT : MAIN_ANT;
 					pDM_SWAT_Table->try_flag = 0;
-					reset_idx=reset_period;
+					pDM_SWAT_Table->reset_idx=reset_period;
 					ODM_RT_TRACE(pDM_Odm, ODM_COMP_ANT_DIV, ODM_DBG_LOUD,("[set try_flag=0]  Normal State:  Need to tryg again!! \n\n\n"));
 					return;
 				}
@@ -1848,7 +1882,7 @@ ODM_AntDiv(
 		return;
 
         {
-#if (BEAMFORMING_SUPPORT == 1)
+	#if (BEAMFORMING_SUPPORT == 1)
 	        BEAMFORMING_CAP		BeamformCap = (pAdapter->MgntInfo.BeamformingInfo.BeamformCap);
 
 		if( BeamformCap & BEAMFORMEE_CAP ) //  BFmee On  &&   Div On ->  Div Off
@@ -1862,7 +1896,7 @@ ODM_AntDiv(
 			}
 		}
 		else // BFmee Off   &&   Div Off ->  Div On
-#endif
+	#endif
 		{
 			if(!(pDM_Odm->SupportAbility & ODM_BB_ANT_DIV)  &&  pDM_Odm->bLinked)
 			{

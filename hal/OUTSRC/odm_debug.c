@@ -49,14 +49,14 @@ pDM_Odm->DebugComponents			=
 //									ODM_COMP_PATH_DIV				|
 //									ODM_COMP_DYNAMIC_PRICCA		|
 //									ODM_COMP_RXHP					|
-// 									ODM_COMP_MP 				|
+//									ODM_COMP_MP 					|
 //									ODM_COMP_DYNAMIC_ATC		|
 
 //MAC Functions
 //									ODM_COMP_EDCA_TURBO			|
 //									ODM_COMP_EARLY_MODE			|
 //RF Functions
-//									ODM_COMP_TX_PWR_TRACK		|
+									ODM_COMP_TX_PWR_TRACK		|
 //									ODM_COMP_RX_GAIN_TRACK		|
 //									ODM_COMP_CALIBRATION			|
 //Common

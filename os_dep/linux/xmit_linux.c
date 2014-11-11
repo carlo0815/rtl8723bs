@@ -342,8 +342,7 @@ int rtw_mlcst2unicst(_adapter *padapter, struct sk_buff *skb)
 				DBG_871X("%s()-%d: rtw_xmit() return error!\n", __FUNCTION__, __LINE__);
 				pxmitpriv->tx_drop++;
 				rtw_skb_free(newskb);
-			} else
-				pxmitpriv->tx_pkts++;
+			}
 		} else {
 			DBG_871X("%s-%d: rtw_skb_copy() failed!\n", __FUNCTION__, __LINE__);
 			pxmitpriv->tx_drop++;
@@ -413,7 +412,6 @@ _func_enter_;
 		goto drop_packet;
 	}
 
-	pxmitpriv->tx_pkts++;
 	RT_TRACE(_module_xmit_osdep_c_, _drv_info_, ("rtw_xmit_entry: tx_pkts=%d\n", (u32)pxmitpriv->tx_pkts));
 	goto exit;
 

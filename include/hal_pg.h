@@ -542,7 +542,9 @@
 //
 #define TX_PWR_BY_RATE_NUM_BAND			2
 #define TX_PWR_BY_RATE_NUM_RF			4
-#define TX_PWR_BY_RATE_NUM				48
+#define TX_PWR_BY_RATE_NUM_RATE			84
+
+#define TXPWR_LMT_MAX_RF				4
 
 //----------------------------------------------------------------------------
 //       EEPROM/EFUSE data structure definition.

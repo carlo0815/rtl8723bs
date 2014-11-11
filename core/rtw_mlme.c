@@ -1243,7 +1243,11 @@ _func_enter_;
 						pmlmepriv->to_join = _TRUE;
 					}
 				}
+				else
 				#endif
+				{
+					rtw_indicate_disconnect(adapter);
+				}
 				_clr_fwstate_(pmlmepriv, _FW_UNDER_LINKING);
 			}
 		}
@@ -1641,8 +1645,16 @@ static struct sta_info *rtw_joinbss_update_stainfo(_adapter *padapter, struct wl
 		psta->mac_id=0;
 #endif
 #endif //removed
-		//psta->raid = networktype_to_raid(pmlmeext->cur_wireless_mode);
-		psta->raid = rtw_hal_networktype_to_raid(padapter,pmlmeext->cur_wireless_mode);
+
+		update_sta_info(padapter, psta);
+
+		//update station supportRate
+		psta->bssratelen = rtw_get_rateset_len(pnetwork->network.SupportedRates);
+		_rtw_memcpy(psta->bssrateset, pnetwork->network.SupportedRates, psta->bssratelen);
+		rtw_hal_update_sta_rate_mask(padapter, psta);
+
+		psta->wireless_mode = pmlmeext->cur_wireless_mode;
+		psta->raid = rtw_hal_networktype_to_raid(padapter,psta);
 
 
 		//sta mode
@@ -1715,11 +1727,6 @@ static struct sta_info *rtw_joinbss_update_stainfo(_adapter *padapter, struct wl
 				preorder_ctrl->wsize_b = 64;//max_ampdu_sz;//ex. 32(kbytes) -> wsize_b=32
 			}
 		}
-
-
-		//misc.
-		update_sta_info(padapter, psta);
-
 	}
 
 	return psta;
@@ -1864,6 +1871,9 @@ _func_enter_;
 	}
 
 	_enter_critical_bh(&pmlmepriv->lock, &irqL);
+
+	pmlmepriv->LinkDetectInfo.TrafficTransitionCount = 0;
+	pmlmepriv->LinkDetectInfo.LowPowerTransitionCount = 0;
 
 	RT_TRACE(_module_rtl871x_mlme_c_,_drv_info_,("\n rtw_joinbss_event_callback !! _enter_critical \n"));
 
@@ -2220,6 +2230,7 @@ _func_enter_;
 		{
 			_enter_critical_bh(&(pmlmepriv->scanned_queue.lock), &irqL);
 			ptarget_wlan = rtw_find_network(&pmlmepriv->scanned_queue, cur_network->network.MacAddress);
+			pmlmepriv->cur_network_scanned = ptarget_wlan;
 			if(ptarget_wlan)	ptarget_wlan->fixed = _TRUE;
 			_exit_critical_bh(&(pmlmepriv->scanned_queue.lock), &irqL);
 			// a sta + bc/mc_stainfo (not Ibss_stainfo)
@@ -3742,10 +3753,19 @@ unsigned int rtw_restructure_ht_ie(_adapter *padapter, u8 *in_ie, u8 *out_ie, ui
 		p = rtw_get_ie(in_ie+12, _HT_ADD_INFO_IE_, &ielen, in_len-12);
 		if(p && (ielen==sizeof(struct ieee80211_ht_addt_info))) {
 			struct HT_info_element *pht_info = (struct HT_info_element *)(p+2);
-			if (pht_info->infos[0] & BIT(2))
-				operation_bw = CHANNEL_WIDTH_40;
-			else
+			if (pht_info->infos[0] & BIT(2)) {
+				switch (pht_info->infos[0] & 0x3) {
+					case 1:
+					case 3:
+						operation_bw = CHANNEL_WIDTH_40;
+						break;
+					default:
+						operation_bw = CHANNEL_WIDTH_20;
+						break;
+				}
+			} else {
 				operation_bw = CHANNEL_WIDTH_20;
+			}
 		}
 
 		//to disable 40M Hz support while gd_bw_40MHz_en = 0
@@ -4238,4 +4258,16 @@ sint check_buddy_fwstate(_adapter *padapter, sint state)
 	return _FALSE;
 }
 
+u8 rtw_get_buddy_bBusyTraffic(_adapter *padapter)
+{
+	if(padapter == NULL)
+		return _FALSE;
+
+	if(padapter->pbuddy_adapter == NULL)
+		return _FALSE;
+
+	return padapter->pbuddy_adapter->mlmepriv.LinkDetectInfo.bBusyTraffic;
+}
+
 #endif //CONFIG_CONCURRENT_MODE
+

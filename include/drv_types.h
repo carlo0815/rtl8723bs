@@ -57,6 +57,7 @@ enum _NIC_VERSION {
 
 };
 
+#define CONFIG_SUSPEND_REFINE
 
 typedef struct _ADAPTER _adapter, ADAPTER,*PADAPTER;
 
@@ -389,6 +390,24 @@ struct debug_priv {
 	u32 dbg_sreset_cnt;
 };
 
+struct rtw_traffic_statistics {
+	// tx statistics
+	u64	tx_bytes;
+	u64	tx_pkts;
+	u64	tx_drop;
+	u64	cur_tx_bytes;
+	u64	last_tx_bytes;
+	u32	cur_tx_tp; // Tx throughput in MBps.
+
+	// rx statistics
+	u64	rx_bytes;
+	u64	rx_pkts;
+	u64	rx_drop;
+	u64	cur_rx_bytes;
+	u64	last_rx_bytes;
+	u32	cur_rx_tp; // Rx throughput in MBps.
+};
+
 struct dvobj_priv
 {
 	/*-------- below is common data --------*/
@@ -434,6 +453,8 @@ struct dvobj_priv
 	ATOMIC_T continual_io_error;
 
 	struct pwrctrl_priv pwrctl_priv;
+
+	struct rtw_traffic_statistics	traffic_stat;
 
 /*-------- below is for SDIO INTERFACE --------*/
 
@@ -701,6 +722,12 @@ struct _ADAPTER{
 	void (*dvobj_deinit)(struct dvobj_priv *dvobj);
 #endif
 
+	u32 (*intf_init)(struct dvobj_priv *dvobj);
+	void (*intf_deinit)(struct dvobj_priv *dvobj);
+	int (*intf_alloc_irq)(struct dvobj_priv *dvobj);
+	void (*intf_free_irq)(struct dvobj_priv *dvobj);
+
+
 	void (*intf_start)(_adapter * adapter);
 	void (*intf_stop)(_adapter * adapter);
 
@@ -826,6 +853,15 @@ struct _ADAPTER{
 #define adapter_to_pwrctl(adapter) (dvobj_to_pwrctl(adapter->dvobj))
 
 int rtw_handle_dualmac(_adapter *adapter, bool init);
+
+#ifdef CONFIG_PNO_SUPPORT
+int rtw_parse_ssid_list_tlv(char** list_str, pno_ssid_t* ssid, int max, int *bytes_left);
+int rtw_dev_pno_set(struct net_device *net, pno_ssid_t* ssid, int num,
+					int pno_time, int pno_repeat, int pno_freq_expo_max);
+#ifdef CONFIG_PNO_SET_DEBUG
+void rtw_dev_pno_debug(struct net_device *net);
+#endif //CONFIG_PNO_SET_DEBUG
+#endif //CONFIG_PNO_SUPPORT
 
 __inline static u8 *myid(struct eeprom_priv *peepriv)
 {

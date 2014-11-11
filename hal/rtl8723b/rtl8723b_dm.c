@@ -537,7 +537,7 @@ rtl8723b_HalDmWatchDog(
 #endif //CONFIG_CONCURRENT_MODE
 
 //#if MP_DRIVER
-if (Adapter->registrypriv.mp_mode == 1)
+if (Adapter->registrypriv.mp_mode == 1 && Adapter->mppriv.mp_dm ==0) // for MP power tracking
 	return;
 //#endif
 

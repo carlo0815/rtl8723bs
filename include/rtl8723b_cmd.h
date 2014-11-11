@@ -76,8 +76,8 @@ enum h2c_cmd_8723B{
 	H2C_8723B_AOAC_GLOBAL_INFO = 0x82,
 	H2C_8723B_AOAC_RSVD_PAGE = 0x83,
 	H2C_8723B_AOAC_RSVD_PAGE2 = 0x84,
-	H2C_8723B_D0_SCAN_OFFLOAD_INFO = 0x85,
-	H2C_8723B_D0_SCAN_OFFLOAD_CTRL = 0x86,
+	H2C_8723B_D0_SCAN_OFFLOAD_CTRL = 0x85,
+	H2C_8723B_D0_SCAN_OFFLOAD_INFO = 0x86,
 	H2C_8723B_CHNL_SWITCH_OFFLOAD = 0x87,
 
 	H2C_8723B_RESET_TSF = 0xC0,
@@ -98,7 +98,7 @@ enum h2c_cmd_8723B{
 #define H2C_8723B_REMOTE_WAKE_CTRL_LEN	2
 #define H2C_8723B_AOAC_GLOBAL_INFO_LEN	2
 #define H2C_8723B_AOAC_RSVDPAGE_LOC_LEN	7
-//#define H2C_8723B_SCAN_OFFLOAD_CTRL_LEN	4
+#define H2C_8723B_SCAN_OFFLOAD_CTRL_LEN	4
 #define H2C_8723B_BT_FW_PATCH_LEN			6
 #define H2C_8723B_RSSI_SETTING_LEN		4
 #define H2C_8723B_AP_REQ_TXRPT_LEN		2
@@ -255,6 +255,7 @@ enum h2c_cmd_8723B{
 #define SET_8723B_H2CCMD_REMOTE_WAKE_CTRL_ARP_OFFLOAD_EN(__pH2CCmd, __Value)				SET_BITS_TO_LE_1BYTE(__pH2CCmd, 1, 1, __Value)
 #define SET_8723B_H2CCMD_REMOTE_WAKE_CTRL_NDP_OFFLOAD_EN(__pH2CCmd, __Value)				SET_BITS_TO_LE_1BYTE(__pH2CCmd, 2, 1, __Value)
 #define SET_8723B_H2CCMD_REMOTE_WAKE_CTRL_GTK_OFFLOAD_EN(__pH2CCmd, __Value)				SET_BITS_TO_LE_1BYTE(__pH2CCmd, 3, 1, __Value)
+#define SET_8723B_H2CCMD_REMOTE_WAKE_CTRL_NLO_OFFLOAD_EN(__pH2CCmd, __Value)	SET_BITS_TO_LE_1BYTE(__pH2CCmd, 4, 1, __Value)
 #define SET_8723B_H2CCMD_REMOTE_WAKE_CTRL_FW_UNICAST_EN(__pH2CCmd, __Value)	SET_BITS_TO_LE_1BYTE(__pH2CCmd, 7, 1, __Value)
 #define SET_8723B_H2CCMD_REMOTE_WAKE_CTRL_ARP_ACTION(__pH2CCmd, __Value)	SET_BITS_TO_LE_1BYTE((__pH2CCmd)+1, 0, 1, __Value)
 
@@ -268,11 +269,20 @@ enum h2c_cmd_8723B{
 #define SET_8723B_H2CCMD_AOAC_RSVDPAGE_LOC_NEIGHBOR_ADV(__pH2CCmd, __Value)			SET_BITS_TO_LE_1BYTE((__pH2CCmd)+2, 0, 8, __Value)
 #define SET_8723B_H2CCMD_AOAC_RSVDPAGE_LOC_GTK_RSP(__pH2CCmd, __Value)					SET_BITS_TO_LE_1BYTE((__pH2CCmd)+3, 0, 8, __Value)
 #define SET_8723B_H2CCMD_AOAC_RSVDPAGE_LOC_GTK_INFO(__pH2CCmd, __Value)					SET_BITS_TO_LE_1BYTE((__pH2CCmd)+4, 0, 8, __Value)
-#define SET_8723B_H2CCMD_AOAC_RSVDPAGE_LOC_PROBE_REQ(__pH2CCmd, __Value)					SET_BITS_TO_LE_1BYTE((__pH2CCmd)+5, 0, 8, __Value)
-#define SET_8723B_H2CCMD_AOAC_RSVDPAGE_LOC_NETWORK_LIST(__pH2CCmd, __Value)					SET_BITS_TO_LE_1BYTE((__pH2CCmd)+6, 0, 8, __Value)
 #ifdef CONFIG_GTK_OL
 #define SET_8723B_H2CCMD_AOAC_RSVDPAGE_LOC_GTK_EXT_MEM(__pH2CCmd, __Value)					SET_BITS_TO_LE_1BYTE((__pH2CCmd)+5, 0, 8, __Value)
 #endif //CONFIG_GTK_OL
+#ifdef CONFIG_PNO_SUPPORT
+#define SET_8723B_H2CCMD_AOAC_RSVDPAGE_LOC_NLO_INFO(__pH2CCmd, __Value)					SET_BITS_TO_LE_1BYTE((__pH2CCmd)+6, 0, 8, __Value)
+#endif
+
+#ifdef CONFIG_PNO_SUPPORT
+// D0_Scan_Offload_Info_0x86
+#define SET_8723B_H2CCMD_AOAC_NLO_FUN_EN(__pH2CCmd, __Value)			SET_BITS_TO_LE_1BYTE((__pH2CCmd), 3, 1, __Value)
+#define SET_8723B_H2CCMD_AOAC_RSVDPAGE_LOC_PROBE_PACKET(__pH2CCmd, __Value)	SET_BITS_TO_LE_1BYTE((__pH2CCmd)+1, 0, 8, __Value)
+#define SET_8723B_H2CCMD_AOAC_RSVDPAGE_LOC_SCAN_INFO(__pH2CCmd, __Value)	SET_BITS_TO_LE_1BYTE((__pH2CCmd)+2, 0, 8, __Value)
+#define SET_8723B_H2CCMD_AOAC_RSVDPAGE_LOC_SSID_INFO(__pH2CCmd, __Value)	SET_BITS_TO_LE_1BYTE((__pH2CCmd)+3, 0, 8, __Value)
+#endif //CONFIG_PNO_SUPPORT
 
 //---------------------------------------------------------------------------------------------------------//
 //-------------------------------------------    Structure    --------------------------------------------------//
@@ -294,6 +304,12 @@ typedef struct _RSVDPAGE_LOC {
 #ifdef CONFIG_GTK_OL
 	u8 LocGTKEXTMEM;
 #endif //CONFIG_GTK_OL
+#ifdef CONFIG_PNO_SUPPORT
+	u8 LocPNOInfo;
+	u8 LocScanInfo;
+	u8 LocSSIDInfo;
+	u8 LocProbePacket;
+#endif //CONFIG_PNO_SUPPORT
 #endif //CONFIG_WOWLAN
 } RSVDPAGE_LOC_8723B, *PRSVDPAGE_LOC_8723B;
 
@@ -328,7 +344,7 @@ void rtl8723b_set_wowlan_cmd(_adapter* padapter, u8 enable);
 void SetFwRelatedForWoWLAN8723b(_adapter* padapter, u8 bHostIsGoingtoSleep);
 #endif//CONFIG_WOWLAN
 
-void rtl8723b_set_FwPwrModeInIPS_cmd(PADAPTER padapter);
+void rtl8723b_set_FwPwrModeInIPS_cmd(PADAPTER padapter, u8 cmd_param);
 
 #ifdef CONFIG_TSF_RESET_OFFLOAD
 u8 rtl8723b_reset_tsf(_adapter *padapter, u8 reset_port);

@@ -1079,7 +1079,7 @@
 #define RCR_AB			BIT(3)				// accept broadcast
 #define RCR_ACRC32		BIT(5)				// accept error packet
 #define RCR_9356SEL		BIT(6)
-#define RCR_AICV		BIT(12)				// Accept ICV error packet
+#define RCR_AICV		BIT(9)				// Accept ICV error packet
 #define RCR_RXFTH0		(BIT(13)|BIT(14)|BIT(15))	// Rx FIFO threshold
 #define RCR_ADF			BIT(18)				// Accept Data(frame type) frame
 #define RCR_ACF			BIT(19)				// Accept control frame

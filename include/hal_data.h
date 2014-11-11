@@ -91,11 +91,11 @@ typedef enum _RT_AMPDU_BRUST_MODE{
 #define MAX_REGULATION_NUM						4
 #define MAX_RF_PATH_NUM_IN_POWER_LIMIT_TABLE	4
 #define MAX_2_4G_BANDWITH_NUM					2
-#define MAX_RATE_SECTION_NUM						6
+#define MAX_RATE_SECTION_NUM						10
 #define MAX_5G_BANDWITH_NUM						4
 
-#define MAX_BASE_NUM_IN_PHY_REG_PG_2_4G			6 //  CCK:1,OFDM:1, HT:2, VHT:2
-#define MAX_BASE_NUM_IN_PHY_REG_PG_5G			5 // OFDM:1, HT:2, VHT:2
+#define MAX_BASE_NUM_IN_PHY_REG_PG_2_4G			10 //  CCK:1,OFDM:1, HT:4, VHT:4
+#define MAX_BASE_NUM_IN_PHY_REG_PG_5G			9 // OFDM:1, HT:4, VHT:4
 
 
 //###### duplicate code,will move to ODM #########
@@ -267,6 +267,7 @@ typedef struct hal_com_data
 	//rf_ctrl
 	u8	rf_chip;
 	u8	rf_type;
+	u8	PackageType;
 	u8	NumTotalRFPath;
 
 	u8	InterfaceSel;
@@ -300,6 +301,7 @@ typedef struct hal_com_data
 	u8	EEPROMBluetoothRadioShared;
 	u8	bTXPowerDataReadFromEEPORM;
 	u8	bAPKThermalMeterIgnore;
+	u8	bDisableSWChannelPlan; // flag of disable software change channel plan
 
 	BOOLEAN 		EepromOrEfuse;
 	u8				EfuseUsedPercentage;
@@ -344,7 +346,7 @@ typedef struct hal_com_data
 	s8	TxPwrByRateOffset[TX_PWR_BY_RATE_NUM_BAND]
 						 [TX_PWR_BY_RATE_NUM_RF]
 						 [TX_PWR_BY_RATE_NUM_RF]
-						 [TX_PWR_BY_RATE_NUM];
+						 [TX_PWR_BY_RATE_NUM_RATE];
 	//---------------------------------------------------------------------------------//
 
 	//2 Power Limit Table
@@ -409,6 +411,10 @@ typedef struct hal_com_data
 	u8	ExternalLNA_2G;
 	u8	ExternalPA_5G;
 	u8	ExternalLNA_5G;
+	u8	TypeGLNA;
+	u8	TypeGPA;
+	u8	TypeALNA;
+	u8	TypeAPA;
 	u8	RFEType;
 	u8	BoardType;
 	u8	ExternalPA;

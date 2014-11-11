@@ -78,7 +78,6 @@ struct	stainfo_stats	{
 	u64	tx_pkts;
 	u64	tx_bytes;
 	u64  tx_drops;
-
 };
 
 #ifdef CONFIG_TDLS

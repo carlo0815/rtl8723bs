@@ -153,12 +153,22 @@ typedef struct _RT_8723B_FIRMWARE_HDR
 #define BCNQ1_PAGE_NUM_8723B		0x00
 #endif
 
+#ifdef CONFIG_PNO_SUPPORT
+#undef BCNQ1_PAGE_NUM_8723B
+#define BCNQ1_PAGE_NUM_8723B		0x00 // 0x04
+#endif
+
 //For WoWLan , more reserved page
-//ARP Rsp:1, RWC:1, GTK Info:1,GTK RSP:2,GTK EXT MEM:2
+//ARP Rsp:1, RWC:1, GTK Info:1,GTK RSP:2,GTK EXT MEM:2, PNO: 6
 #ifdef CONFIG_WOWLAN
 #define WOWLAN_PAGE_NUM_8723B	0x07
 #else
 #define WOWLAN_PAGE_NUM_8723B	0x00
+#endif
+
+#ifdef CONFIG_PNO_SUPPORT
+#undef WOWLAN_PAGE_NUM_8723B
+#define WOWLAN_PAGE_NUM_8723B	0x0d
 #endif
 
 #define TX_TOTAL_PAGE_NUMBER_8723B	(0xFF - BCNQ_PAGE_NUM_8723B - BCNQ1_PAGE_NUM_8723B - WOWLAN_PAGE_NUM_8723B)
@@ -231,6 +241,13 @@ typedef struct _C2H_EVT_HDR
 	u8	CmdSeq;
 } __attribute__((__packed__)) C2H_EVT_HDR, *PC2H_EVT_HDR;
 
+typedef enum tag_Package_Definition
+{
+	PACKAGE_DEFAULT		= 0,
+	PACKAGE_QFN68		= BIT(0),
+	PACKAGE_TFBGA90		= BIT(1),
+	PACKAGE_TFBGA79		= BIT(2),
+}PACKAGE_TYPE_E;
 
 #define INCLUDE_MULTI_FUNC_BT(_Adapter)		(GET_HAL_DATA(_Adapter)->MultiFunc & RT_MULTI_FUNC_BT)
 #define INCLUDE_MULTI_FUNC_GPS(_Adapter)	(GET_HAL_DATA(_Adapter)->MultiFunc & RT_MULTI_FUNC_GPS)
@@ -262,6 +279,7 @@ void Hal_EfuseParseCustomerID_8723B(PADAPTER padapter, u8 *hwinfo, BOOLEAN AutoL
 void Hal_EfuseParseAntennaDiversity_8723B(PADAPTER padapter, u8 *hwinfo, BOOLEAN AutoLoadFail);
 void Hal_EfuseParseXtal_8723B(PADAPTER pAdapter, u8 *hwinfo, u8 AutoLoadFail);
 void Hal_EfuseParseThermalMeter_8723B(PADAPTER padapter, u8 *hwinfo, u8 AutoLoadFail);
+VOID Hal_EfuseParsePackageType_8723B(PADAPTER pAdapter,u8* hwinfo,BOOLEAN AutoLoadFail);
 
 #ifdef CONFIG_C2H_PACKET_EN
 void C2HPacketHandler_8723B(PADAPTER padapter, u8 *pbuffer, u16 length);
@@ -303,7 +321,7 @@ void rtw_set_sec_pn(_adapter *padapter);
 void HalSetOutPutGPIO(PADAPTER padapter, u8 index, u8 OutPutValue);
 #endif
 
-int FirmwareDownloadBT(IN PADAPTER Adapter, PRT_FIRMWARE_8723B pFirmware);
+int FirmwareDownloadBT(IN PADAPTER Adapter, PRT_MP_FIRMWARE pFirmware);
 
 void CCX_FwC2HTxRpt_8723b(PADAPTER padapter, u8 *pdata, u8 len);
 s32 c2h_id_filter_ccx_8723b(u8 *buf);

@@ -20,6 +20,9 @@
 #define _RTW_MLME_EXT_C_
 
 #include <drv_types.h>
+#ifdef CONFIG_IOCTL_CFG80211
+#include <rtw_wifi_regd.h>
+#endif //CONFIG_IOCTL_CFG80211
 
 
 struct mlme_handler mlme_sta_tbl[]={
@@ -182,16 +185,22 @@ static RT_CHANNEL_PLAN_5G	RTW_ChannelPlan5G[RT_CHANNEL_DOMAIN_5G_MAX] = {
 	{{36,40,44,48,149,153,157,161,165},9},														// 0x17, RT_CHANNEL_DOMAIN_5G_ETSI8
 	{{100,104,108,112,116,120,124,128,132,136,140},11},											// 0x18, RT_CHANNEL_DOMAIN_5G_ETSI9
 	{{149,153,157,161,165},5},																	// 0x19, RT_CHANNEL_DOMAIN_5G_ETSI10
+	{{36,40,44,48,52,56,60,64,132,136,140,149,153,157,161,165},16},									// 0x1A, RT_CHANNEL_DOMAIN_5G_ETSI11
+	{{52,56,60,64,100,104,108,112,116,132,136,140,149,153,157,161,165},17},							// 0x1B, RT_CHANNEL_DOMAIN_5G_NCC4
+	{{149,153,157,161},4},																		// 0x1C, RT_CHANNEL_DOMAIN_5G_ETSI12
+	{{36,40,44,48,100,104,108,112,116,132,136,140,149,153,157,161,165},17},							// 0x1D, RT_CHANNEL_DOMAIN_5G_FCC9
+	{{36,40,44,48,100,104,108,112,116,132,136,140},12},											// 0x1E, RT_CHANNEL_DOMAIN_5G_ETSI13
+	{{36,40,44,48,52,56,60,64,100,104,108,112,116,132,136,140,149,153,157,161},20},					// 0x1F, RT_CHANNEL_DOMAIN_5G_FCC10
 
 	//===== Driver self defined for old channel plan Compatible ,Remember to modify if have new channel plan definition =====
-	{{36,40,44,48,52,56,60,64,100,104,108,112,116,132,136,140,149,153,157,161,165},21},				// 0x1A, RT_CHANNEL_DOMAIN_5G_FCC
-	{{36,40,44,48},4},																			// 0x1B, RT_CHANNEL_DOMAIN_5G_JAPAN_NO_DFS
-	{{36,40,44,48,149,153,157,161},8},															// 0x1C, RT_CHANNEL_DOMAIN_5G_FCC4_NO_DFS
+	{{36,40,44,48,52,56,60,64,100,104,108,112,116,132,136,140,149,153,157,161,165},21},				// 0x20, RT_CHANNEL_DOMAIN_5G_FCC
+	{{36,40,44,48},4},																			// 0x21, RT_CHANNEL_DOMAIN_5G_JAPAN_NO_DFS
+	{{36,40,44,48,149,153,157,161},8},															// 0x22, RT_CHANNEL_DOMAIN_5G_FCC4_NO_DFS
 };
 
 static RT_CHANNEL_PLAN_MAP	RTW_ChannelPlanMap[RT_CHANNEL_DOMAIN_MAX] = {
 	//===== 0x00 ~ 0x1F , Old Define =====
-	{0x02,0x1A},	//0x00, RT_CHANNEL_DOMAIN_FCC
+	{0x02,0x20},	//0x00, RT_CHANNEL_DOMAIN_FCC
 	{0x02,0x0A},	//0x01, RT_CHANNEL_DOMAIN_IC
 	{0x01,0x01},	//0x02, RT_CHANNEL_DOMAIN_ETSI
 	{0x01,0x00},	//0x03, RT_CHANNEL_DOMAIN_SPAIN
@@ -209,12 +218,12 @@ static RT_CHANNEL_PLAN_MAP	RTW_ChannelPlanMap[RT_CHANNEL_DOMAIN_MAX] = {
 	{0x02,0x09},	//0x0F, RT_CHANNEL_DOMAIN_TURKEY
 	{0x01,0x01},	//0x10, RT_CHANNEL_DOMAIN_JAPAN
 	{0x02,0x05},	//0x11, RT_CHANNEL_DOMAIN_FCC_NO_DFS
-	{0x01,0x1B},	//0x12, RT_CHANNEL_DOMAIN_JAPAN_NO_DFS
+	{0x01,0x21},	//0x12, RT_CHANNEL_DOMAIN_JAPAN_NO_DFS
 	{0x00,0x04},	//0x13, RT_CHANNEL_DOMAIN_WORLD_WIDE_5G
 	{0x02,0x10},	//0x14, RT_CHANNEL_DOMAIN_TAIWAN_NO_DFS
-	{0x00,0x1B},	//0x15, RT_CHANNEL_DOMAIN_ETSI_NO_DFS
-	{0x00,0x1C},	//0x16, RT_CHANNEL_DOMAIN_KOREA_NO_DFS
-	{0x03,0x1B},	//0x17, RT_CHANNEL_DOMAIN_JAPAN_NO_DFS
+	{0x00,0x21},	//0x15, RT_CHANNEL_DOMAIN_ETSI_NO_DFS
+	{0x00,0x22},	//0x16, RT_CHANNEL_DOMAIN_KOREA_NO_DFS
+	{0x03,0x21},	//0x17, RT_CHANNEL_DOMAIN_JAPAN_NO_DFS
 	{0x06,0x08},	//0x18, RT_CHANNEL_DOMAIN_PAKISTAN_NO_DFS
 	{0x02,0x08},	//0x19, RT_CHANNEL_DOMAIN_TAIWAN2_NO_DFS
 	{0x00,0x00},	//0x1A,
@@ -268,6 +277,12 @@ static RT_CHANNEL_PLAN_MAP	RTW_ChannelPlanMap[RT_CHANNEL_DOMAIN_MAX] = {
 	{0x00,0x17},	//0x49, RT_CHANNEL_DOMAIN_WORLD_ETSI8
 	{0x00,0x18},	//0x50, RT_CHANNEL_DOMAIN_WORLD_ETSI9
 	{0x00,0x19},	//0x51, RT_CHANNEL_DOMAIN_WORLD_ETSI10
+	{0x00,0x1A},	//0x52, RT_CHANNEL_DOMAIN_WORLD_ETSI11
+	{0x02,0x1B},	//0x53, RT_CHANNEL_DOMAIN_FCC1_NCC4
+	{0x00,0x1C},	//0x54, RT_CHANNEL_DOMAIN_WORLD_ETSI12
+	{0x02,0x1D},	//0x55, RT_CHANNEL_DOMAIN_FCC1_FCC9
+	{0x00,0x1E},	//0x56, RT_CHANNEL_DOMAIN_WORLD_ETSI13
+	{0x02,0x1F},	//0x57, RT_CHANNEL_DOMAIN_FCC1_FCC10
 };
 
 static RT_CHANNEL_PLAN_MAP	RTW_CHANNEL_PLAN_MAP_REALTEK_DEFINE = {0x03,0x02}; //use the conbination for max channel numbers
@@ -946,10 +961,10 @@ _continue:
 
 
 #ifdef CONFIG_ATMEL_RC_PATCH
-		if (wps_ie = rtw_get_wps_ie(
+		if ((wps_ie = rtw_get_wps_ie(
 			pframe + WLAN_HDR_A3_LEN + _PROBEREQ_IE_OFFSET_,
 			len - WLAN_HDR_A3_LEN - _PROBEREQ_IE_OFFSET_,
-			 NULL, &wps_ielen)) {
+			 NULL, &wps_ielen))) {
 
 			target_ie = rtw_get_wps_attr_content( wps_ie, wps_ielen, WPS_ATTR_MANUFACTURER, NULL, &target_ielen);
 		}
@@ -1504,6 +1519,7 @@ unsigned int OnAuth(_adapter *padapter, union recv_frame *precv_frame)
 	pstat = rtw_get_stainfo(pstapriv, sa);
 	if (pstat == NULL)
 	{
+
 		// allocate a new one
 		DBG_871X("going to alloc stainfo for sa="MAC_FMT"\n",  MAC_ARG(sa));
 		pstat = rtw_alloc_stainfo(pstapriv, sa);
@@ -1522,6 +1538,7 @@ unsigned int OnAuth(_adapter *padapter, union recv_frame *precv_frame)
 	}
 	else
 	{
+
 		_enter_critical_bh(&pstapriv->asoc_list_lock, &irqL);
 		if(rtw_is_list_empty(&pstat->asoc_list)==_FALSE)
 		{
@@ -1542,6 +1559,7 @@ unsigned int OnAuth(_adapter *padapter, union recv_frame *precv_frame)
 	_enter_critical_bh(&pstapriv->auth_list_lock, &irqL);
 	if (rtw_is_list_empty(&pstat->auth_list))
 	{
+
 		rtw_list_insert_tail(&pstat->auth_list, &pstapriv->auth_list);
 		pstapriv->auth_list_cnt++;
 	}
@@ -1549,6 +1567,7 @@ unsigned int OnAuth(_adapter *padapter, union recv_frame *precv_frame)
 
 	if (pstat->auth_seq == 0)
 		pstat->expire_to = pstapriv->auth_to;
+
 
 	if ((pstat->auth_seq + 1) != seq)
 	{
@@ -5825,11 +5844,11 @@ unsigned int on_action_public_p2p(union recv_frame *precv_frame)
 						if ( rtw_p2p_role(pwdinfo) == P2P_ROLE_CLIENT )
 						{
 							pwdinfo->p2p_info.operation_ch[ 0 ] = pwdinfo->peer_operating_ch;
-							#ifdef P2P_OP_CHECK_SOCIAL_CH
+							#ifdef CONFIG_P2P_OP_CHK_SOCIAL_CH
 							pwdinfo->p2p_info.operation_ch[ 1 ] = 1;	//Check whether GO is operating in channel 1;
 							pwdinfo->p2p_info.operation_ch[ 2 ] = 6;	//Check whether GO is operating in channel 6;
 							pwdinfo->p2p_info.operation_ch[ 3 ] = 11;	//Check whether GO is operating in channel 11;
-							#endif //P2P_OP_CHECK_SOCIAL_CH
+							#endif //CONFIG_P2P_OP_CHK_SOCIAL_CH
 							pwdinfo->p2p_info.scan_op_ch_only = 1;
 							_set_timer( &pwdinfo->reset_ch_sitesurvey2, P2P_RESET_SCAN_CH );
 						}
@@ -5859,11 +5878,11 @@ unsigned int on_action_public_p2p(union recv_frame *precv_frame)
 					if ( rtw_p2p_role(pwdinfo) == P2P_ROLE_CLIENT )
 					{
 						pwdinfo->p2p_info.operation_ch[ 0 ] = pwdinfo->peer_operating_ch;
-						#ifdef P2P_OP_CHECK_SOCIAL_CH
+						#ifdef CONFIG_P2P_OP_CHK_SOCIAL_CH
 						pwdinfo->p2p_info.operation_ch[ 1 ] = 1;	//Check whether GO is operating in channel 1;
 						pwdinfo->p2p_info.operation_ch[ 2 ] = 6;	//Check whether GO is operating in channel 6;
 						pwdinfo->p2p_info.operation_ch[ 3 ] = 11;	//Check whether GO is operating in channel 11;
-						#endif //P2P_OP_CHECK_SOCIAL_CH
+						#endif //CONFIG_P2P_OP_CHK_SOCIAL_CH
 						pwdinfo->p2p_info.scan_op_ch_only = 1;
 						_set_timer( &pwdinfo->reset_ch_sitesurvey2, P2P_RESET_SCAN_CH );
 					}
@@ -5944,11 +5963,11 @@ unsigned int on_action_public_p2p(union recv_frame *precv_frame)
 											{
 												//	The operating channel is acceptable for this device.
 												pwdinfo->rx_invitereq_info.operation_ch[0]= operatingch_info[4];
-												#ifdef P2P_OP_CHECK_SOCIAL_CH
+												#ifdef CONFIG_P2P_OP_CHK_SOCIAL_CH
 												pwdinfo->rx_invitereq_info.operation_ch[1]= 1;		//Check whether GO is operating in channel 1;
 												pwdinfo->rx_invitereq_info.operation_ch[2]= 6;		//Check whether GO is operating in channel 6;
 												pwdinfo->rx_invitereq_info.operation_ch[3]= 11;		//Check whether GO is operating in channel 11;
-												#endif //P2P_OP_CHECK_SOCIAL_CH
+												#endif //CONFIG_P2P_OP_CHK_SOCIAL_CH
 												pwdinfo->rx_invitereq_info.scan_op_ch_only = 1;
 												_set_timer( &pwdinfo->reset_ch_sitesurvey, P2P_RESET_SCAN_CH );
 												rtw_p2p_set_state(pwdinfo, P2P_STATE_RECV_INVITE_REQ_MATCH );
@@ -6149,7 +6168,7 @@ unsigned int on_action_public_p2p(union recv_frame *precv_frame)
 
 		}
 	}
-#endif //CONFIG_P2P
+
 
 exit:
 
@@ -6157,7 +6176,7 @@ exit:
 	{
 		rtw_mfree(merged_p2pie, merged_p2p_ielen + 2);
 	}
-
+#endif //CONFIG_P2P
 	return _SUCCESS;
 }
 
@@ -9184,10 +9203,9 @@ void site_survey(_adapter *padapter)
 
 #ifdef CONFIG_CONCURRENT_MODE
 
-#ifdef CONFIG_STA_MODE_SCAN_UNDER_AP_MODE
+#if defined(CONFIG_STA_MODE_SCAN_UNDER_AP_MODE) || defined(CONFIG_ATMEL_RC_PATCH)
 	u8 stay_buddy_ch = 0;
-#endif //CONFIG_STA_MODE_SCAN_UNDER_AP_MODE
-
+#endif
 	struct mlme_priv *pmlmepriv = &(padapter->mlmepriv);
 	PADAPTER pbuddy_adapter = padapter->pbuddy_adapter;
 	struct mlme_ext_priv *pbuddy_mlmeext = &pbuddy_adapter->mlmeextpriv;
@@ -9233,6 +9251,7 @@ void site_survey(_adapter *padapter)
 	}
 
 	if (0){
+#ifdef CONFIG_P2P
 		DBG_871X(FUNC_ADPT_FMT" ch:%u (cnt:%u,idx:%d) at %dms, %c%c%c\n"
 		, FUNC_ADPT_ARG(padapter)
 		, survey_channel
@@ -9241,6 +9260,16 @@ void site_survey(_adapter *padapter)
 		, ScanType?'A':'P', pmlmeext->sitesurvey_res.scan_mode?'A':'P'
 		, pmlmeext->sitesurvey_res.ssid[0].SsidLength?'S':' '
 		);
+#else
+		DBG_871X(FUNC_ADPT_FMT" ch:%u (cnt:%u) at %dms, %c%c%c\n"
+                , FUNC_ADPT_ARG(padapter)
+                , survey_channel
+                , pmlmeext->sitesurvey_res.channel_idx
+                , rtw_get_passing_time_ms(padapter->mlmepriv.scan_start_time)
+                , ScanType?'A':'P', pmlmeext->sitesurvey_res.scan_mode?'A':'P'
+                , pmlmeext->sitesurvey_res.ssid[0].SsidLength?'S':' '
+                );
+#endif // CONFIG_P2P
 		#ifdef DBG_FIXED_CHAN
 		DBG_871X(FUNC_ADPT_FMT" fixed_chan:%u\n", pmlmeext->fixed_chan);
 		#endif
@@ -9252,8 +9281,7 @@ void site_survey(_adapter *padapter)
 		//rtw_hal_get_hwreg(padapter, HW_VAR_TXPAUSE, (u8 *)(&val8));
 		//val8 |= 0x0f;
 		//rtw_hal_set_hwreg(padapter, HW_VAR_TXPAUSE, (u8 *)(&val8));
-#ifdef CONFIG_CONCURRENT_MODE
-#ifdef CONFIG_STA_MODE_SCAN_UNDER_AP_MODE
+#if defined(CONFIG_STA_MODE_SCAN_UNDER_AP_MODE) || defined(CONFIG_ATMEL_RC_PATCH)
 		if((padapter->pbuddy_adapter->mlmeextpriv.mlmext_info.state&0x03) == WIFI_FW_AP_STATE)
 		{
 			if( pmlmeinfo->scan_cnt == RTW_SCAN_NUM_OF_CH )
@@ -9269,8 +9297,7 @@ void site_survey(_adapter *padapter)
 				pmlmeinfo->scan_cnt++;
 			}
 		}
-#endif //CONFIG_STA_MODE_SCAN_UNDER_AP_MODE
-#endif //CONFIG_CONCURRENT_MODE
+#endif
 		if(pmlmeext->sitesurvey_res.channel_idx == 0)
 		{
 #ifdef DBG_FIXED_CHAN
@@ -9290,7 +9317,7 @@ void site_survey(_adapter *padapter)
 				SelectChannel(padapter, survey_channel);
 		}
 
-#ifdef CONFIG_STA_MODE_SCAN_UNDER_AP_MODE
+#if defined(CONFIG_STA_MODE_SCAN_UNDER_AP_MODE) || defined(CONFIG_ATMEL_RC_PATCH)
 		if( stay_buddy_ch == 1 )
 		{
 			val8 = 0; //survey done
@@ -9307,7 +9334,7 @@ void site_survey(_adapter *padapter)
 			val8 = 1; //under site survey
 			rtw_hal_set_hwreg(padapter, HW_VAR_MLME_SITESURVEY, (u8 *)(&val8));
 		}
-#endif //CONFIG_STA_MODE_SCAN_UNDER_AP_MODE
+#endif
 
 		if(ScanType == SCAN_ACTIVE) //obey the channel plan setting...
 		{
@@ -9341,38 +9368,28 @@ void site_survey(_adapter *padapter)
 				}
 			}
 		}
-#ifdef CONFIG_ATMEL_RC_PATCH
-	#ifdef CONFIG_P2P
-		if( !rtw_p2p_chk_state(pwdinfo, P2P_STATE_SCAN)  &&
-			!rtw_p2p_chk_state(pwdinfo, P2P_STATE_FIND_PHASE_SEARCH)
-			)
-#endif//CONFIG_P2P
-		{
-			if(ScanType == SCAN_ACTIVE){
-				if( check_fwstate(pmlmepriv, _FW_LINKED) == _TRUE){
-					if(survey_channel == pmlmeext->cur_channel )
-						set_survey_timer(pmlmeext, 200);
-					else
-						set_survey_timer(pmlmeext, 20);
-				}
-				else{
-					set_survey_timer(pmlmeext, 40);
-				}
-			}
-			else{//SCAN_PASSIVE
-				set_survey_timer(pmlmeext, pmlmeext->chan_scan_time);
-			}
+#if  defined(CONFIG_ATMEL_RC_PATCH)
+		// treat wlan0 & p2p0 in same way, may be changed in near feature.
+		// assume home channel is 6, channel switch sequence will be
+		//	1,2-6-3,4-6-5,6-6-7,8-6-9,10-6-11,12-6-13,14
+		//if (rtw_p2p_chk_state(pwdinfo, P2P_STATE_NONE)==_TRUE)
+
+		if( stay_buddy_ch == 1 )
+			set_survey_timer(pmlmeext, pmlmeext->chan_scan_time * RTW_STAY_AP_CH_MILLISECOND );
+		else {
+			if( check_fwstate(pmlmepriv, _FW_LINKED) == _TRUE)
+				set_survey_timer(pmlmeext, 20);
+			else
+				set_survey_timer(pmlmeext, 40);
 		}
-		else
-#endif //CONFIG_ATMEL_RC_PATCH
-		{
-#ifdef CONFIG_STA_MODE_SCAN_UNDER_AP_MODE
+#elif defined(CONFIG_STA_MODE_SCAN_UNDER_AP_MODE)
 		if( stay_buddy_ch == 1 )
 			set_survey_timer(pmlmeext, pmlmeext->chan_scan_time * RTW_STAY_AP_CH_MILLISECOND );
 		else
-#endif //CONFIG_STA_MODE_SCAN_UNDER_AP_MODE
 			set_survey_timer(pmlmeext, pmlmeext->chan_scan_time);
-		}
+#else
+			set_survey_timer(pmlmeext, pmlmeext->chan_scan_time);
+#endif
 	}
 	else
 	{
@@ -9444,9 +9461,9 @@ void site_survey(_adapter *padapter)
 #endif //CONFIG_P2P
 		{
 
-#ifdef CONFIG_STA_MODE_SCAN_UNDER_AP_MODE
+#if defined(CONFIG_STA_MODE_SCAN_UNDER_AP_MODE) || defined(CONFIG_ATMEL_RC_PATCH)
 			pmlmeinfo->scan_cnt = 0;
-#endif //CONFIG_DMP_STA_NODE_SCAN_UNDER_AP_MODE
+#endif
 
 #ifdef CONFIG_ANTENNA_DIVERSITY
 			// 20100721:Interrupt scan operation here.
@@ -9493,19 +9510,14 @@ void site_survey(_adapter *padapter)
 #ifdef CONFIG_DUALMAC_CONCURRENT
 				dc_set_channel_bwmode_survey_done(padapter);
 #else
-				if( pwdinfo->driver_interface == DRIVER_WEXT )
-				{
-					if( rtw_p2p_chk_state(pwdinfo, P2P_STATE_LISTEN) )
-					{
-						set_channel_bwmode(padapter, pwdinfo->listen_channel, HAL_PRIME_CHNL_OFFSET_DONT_CARE, CHANNEL_WIDTH_20);
-					}
-					else
-						set_channel_bwmode(padapter, pmlmeext->cur_channel, pmlmeext->cur_ch_offset, pmlmeext->cur_bwmode);
-				}
-				else if( pwdinfo->driver_interface == DRIVER_CFG80211 )
-				{
-					set_channel_bwmode(padapter, pmlmeext->cur_channel, pmlmeext->cur_ch_offset, pmlmeext->cur_bwmode);
-				}
+
+#ifdef CONFIG_P2P
+			if( (pwdinfo->driver_interface == DRIVER_WEXT) && (rtw_p2p_chk_state(pwdinfo, P2P_STATE_LISTEN)) )
+				set_channel_bwmode(padapter, pwdinfo->listen_channel, HAL_PRIME_CHNL_OFFSET_DONT_CARE, CHANNEL_WIDTH_20);
+			else
+#endif //CONFIG_P2P
+				set_channel_bwmode(padapter, pmlmeext->cur_channel, pmlmeext->cur_ch_offset, pmlmeext->cur_bwmode);
+
 #endif //CONFIG_DUALMAC_CONCURRENT
 #endif //CONFIG_CONCURRENT_MODE
 			}
@@ -9881,6 +9893,7 @@ void start_create_ibss(_adapter* padapter)
 
 			report_join_res(padapter, 1);
 			pmlmeinfo->state |= WIFI_FW_ASSOC_SUCCESS;
+			rtw_indicate_connect(padapter);
 		}
 	}
 	else
@@ -10752,6 +10765,7 @@ void update_sta_info(_adapter *padapter, struct sta_info *psta)
 
 		psta->qos_option = _TRUE;
 
+		_rtw_memcpy(&psta->htpriv.ht_cap, &pmlmeinfo->HT_caps, sizeof(struct rtw_ieee80211_ht_cap));
 	}
 	else
 #endif //CONFIG_80211N_HT
@@ -10864,6 +10878,7 @@ static void rtw_mlmeext_disconnect(_adapter *padapter)
 
 	//pmlmepriv->LinkDetectInfo.TrafficBusyState = _FALSE;
 	pmlmepriv->LinkDetectInfo.TrafficTransitionCount = 0;
+	pmlmepriv->LinkDetectInfo.LowPowerTransitionCount = 0;
 
 }
 
@@ -10887,14 +10902,6 @@ void mlmeext_joinbss_event_callback(_adapter *padapter, int join_res)
 
 	if((pmlmeinfo->state&0x03) == WIFI_FW_ADHOC_STATE)
 	{
-		//for bc/mc
-		psta_bmc = rtw_get_bcmc_stainfo(padapter);
-		if(psta_bmc)
-		{
-			pmlmeinfo->FW_sta_info[psta_bmc->mac_id].psta = psta_bmc;
-			update_bmc_sta_support_rate(padapter, psta_bmc->mac_id);
-			Update_RA_Entry(padapter, psta_bmc);
-		}
 		//update bc/mc sta_info
 		update_bmc_sta(padapter);
 	}
@@ -11025,12 +11032,20 @@ void mlmeext_sta_add_event_callback(_adapter *padapter, struct sta_info *psta)
 
 	pmlmeinfo->FW_sta_info[psta->mac_id].psta = psta;
 
-	//rate radaptive
-	Update_RA_Entry(padapter, psta);
+	psta->bssratelen = rtw_get_rateset_len(pmlmeinfo->FW_sta_info[psta->mac_id].SupportedRates);
+	_rtw_memcpy(psta->bssrateset, pmlmeinfo->FW_sta_info[psta->mac_id].SupportedRates, psta->bssratelen);
 
 	//update adhoc sta_info
 	update_sta_info(padapter, psta);
 
+	rtw_hal_update_sta_rate_mask(padapter, psta);
+
+	// ToDo: HT for Ad-hoc
+	psta->wireless_mode = rtw_check_network_type(psta->bssrateset, psta->bssratelen, pmlmeext->cur_channel);
+	psta->raid = rtw_hal_networktype_to_raid(padapter, psta);
+
+	//rate radaptive
+	Update_RA_Entry(padapter, psta);
 }
 
 void mlmeext_sta_del_event_callback(_adapter *padapter)
@@ -11125,19 +11140,6 @@ void _linked_info_dump(_adapter *padapter)
 				rtw_hal_get_def_var(padapter, HW_DEF_RA_INFO_DUMP, &i);
 		}
 	}
-
-	if((pmlmeinfo->state&0x03) == WIFI_FW_STATION_STATE)
-	{
-		mac_id=0;
-	}
-	else if((pmlmeinfo->state&0x03) == _HW_STATE_AP_)
-	{
-		mac_id=2;
-	}
-
-	//============  rx info ============
-	rtw_hal_set_def_var(padapter, HW_DEF_FA_CNT_DUMP,&mac_id);
-
 }
 
 u8 chk_ap_is_alive(_adapter *padapter, struct sta_info *psta)
@@ -11209,10 +11211,11 @@ void linked_status_chk(_adapter *padapter)
 		#else
 		rx_chk_limit = 8;
 		#endif
-
+#ifdef CONFIG_P2P
 		if (!rtw_p2p_chk_state(&padapter->wdinfo, P2P_STATE_NONE))
 			link_count_limit = 3; // 8 sec
 		else
+#endif // CONFIG_P2P
 			link_count_limit = 7; // 16 sec
 
 		// Marked by Kurt 20130715
@@ -11364,9 +11367,9 @@ void survey_timer_hdl(_adapter *padapter)
 	{
 		if(pmlmeext->sitesurvey_res.state ==  SCAN_PROCESS)
 		{
-#ifdef CONFIG_STA_MODE_SCAN_UNDER_AP_MODE
+#if defined(CONFIG_STA_MODE_SCAN_UNDER_AP_MODE) || defined(CONFIG_ATMEL_RC_PATCH)
 			if( padapter->mlmeextpriv.mlmext_info.scan_cnt != RTW_SCAN_NUM_OF_CH )
-#endif //CONFIG_STA_MODE_SCAN_UNDER_AP_MODE
+#endif
 				pmlmeext->sitesurvey_res.channel_idx++;
 		}
 
@@ -13892,6 +13895,14 @@ u8 set_chplan_hdl(_adapter *padapter, unsigned char *pbuf)
 
 	pmlmeext->max_chan_nums = init_channel_set(padapter, setChannelPlan_param->channel_plan, pmlmeext->channel_set);
 	init_channel_list(padapter, pmlmeext->channel_set, pmlmeext->max_chan_nums, &pmlmeext->channel_list);
+
+#ifdef CONFIG_IOCTL_CFG80211
+	if ((padapter->rtw_wdev != NULL) && (padapter->rtw_wdev->wiphy)) {
+		struct regulatory_request request;
+		request.initiator = NL80211_REGDOM_SET_BY_DRIVER;
+		rtw_reg_notifier(padapter->rtw_wdev->wiphy, &request);
+	}
+#endif //CONFIG_IOCTL_CFG80211
 
 	return 	H2C_SUCCESS;
 }

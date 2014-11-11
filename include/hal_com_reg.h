@@ -367,6 +367,7 @@
 #define REG_MAR							0x0620
 #define REG_MBIDCAMCFG					0x0628
 
+#define REG_PNO_STATUS					0x0631
 #define REG_USTIME_EDCA				0x0638
 #define REG_MAC_SPEC_SIFS				0x063A
 // 20100719 Joseph: Hardware register definition change. (HW datasheet v54)

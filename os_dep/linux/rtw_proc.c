@@ -81,6 +81,11 @@ inline struct proc_dir_entry *rtw_proc_create_entry(const char *name, struct pro
 	return entry;
 }
 
+static int proc_get_dummy(struct seq_file *m, void *v)
+{
+	return 0;
+}
+
 static int proc_get_drv_version(struct seq_file *m, void *v)
 {
 	dump_drv_version(m);
@@ -262,7 +267,7 @@ static int proc_get_rf_reg_dump(struct seq_file *m, void *v)
 * init/deinit when register/unregister net_device
 */
 const struct rtw_proc_hdl adapter_proc_hdls [] = {
-	{"write_reg", NULL, proc_set_write_reg},
+	{"write_reg", proc_get_dummy, proc_set_write_reg},
 	{"read_reg", proc_get_read_reg, proc_set_read_reg},
 	{"fwstate", proc_get_fwstate, NULL},
 	{"sec_info", proc_get_sec_info, NULL},
@@ -475,7 +480,7 @@ static int rtw_odm_proc_open(struct inode *inode, struct file *file)
 	ssize_t index = (ssize_t)PDE_DATA(inode);
 	const struct rtw_proc_hdl *hdl = odm_proc_hdls+index;
 
-       return single_open(file, hdl->show, proc_get_parent_data(inode));
+	return single_open(file, hdl->show, proc_get_parent_data(inode));
 }
 
 static ssize_t rtw_odm_proc_write(struct file *file, const char __user *buffer, size_t count, loff_t *pos)

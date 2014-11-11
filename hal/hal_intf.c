@@ -673,6 +673,11 @@ c2h_id_filter rtw_hal_c2h_id_filter_ccx(_adapter *adapter)
 	return adapter->HalFunc.c2h_id_filter_ccx;
 }
 
+s32 rtw_hal_is_disable_sw_channel_plan(PADAPTER padapter)
+{
+	return GET_HAL_DATA(padapter)->bDisableSWChannelPlan;
+}
+
 #ifdef CONFIG_BT_COEXIST
 s32 rtw_hal_fill_h2c_cmd(PADAPTER padapter, u8 ElementID, u32 CmdLen, u8 *pCmdBuffer)
 {

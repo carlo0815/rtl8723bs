@@ -696,7 +696,7 @@ _CheckWLANFwPatchBTFwReady(
 	return ret;
 }
 
-int ReservedPage_Compare(PADAPTER Adapter,PRT_FIRMWARE_8723B pFirmware,u32 BTPatchSize)
+int ReservedPage_Compare(PADAPTER Adapter,PRT_MP_FIRMWARE pFirmware,u32 BTPatchSize)
 {
 	u8 temp,ret,lastBTsz;
 	u32 u1bTmp=0,address_start=0,count=0,i=0;
@@ -789,7 +789,7 @@ int ReservedPage_Compare(PADAPTER Adapter,PRT_FIRMWARE_8723B pFirmware,u32 BTPat
  * 32 bytes description of part4. Using this method, we can put the whole bt firmware to 0x30 and only
  * has 32 bytes descrption at the head of part 1.
 */
-s32 FirmwareDownloadBT(PADAPTER padapter, PRT_FIRMWARE_8723B pFirmware)
+s32 FirmwareDownloadBT(PADAPTER padapter, PRT_MP_FIRMWARE pFirmware)
 {
 	s32 rtStatus;
 	u8 *pBTFirmwareBuf;
@@ -1036,17 +1036,18 @@ s32 rtl8723b_FirmwareDownload(PADAPTER padapter, BOOLEAN  bUsedWoWLANFw)
 		rtw_write8(padapter, REG_MCUFWDL, rtw_read8(padapter, REG_MCUFWDL)|FWDL_ChkSum_rpt);
 		rtStatus = _WriteFW(padapter, pFirmwareBuf, FirmwareLen);
 
-		if(rtStatus == _SUCCESS
-			||(rtw_get_passing_time_ms(fwdl_start_time) > 500 && writeFW_retry++ >= 3)
+		if(rtStatus == _SUCCESS || padapter->bDriverStopped || padapter->bSurpriseRemoved
+			||(writeFW_retry++ >= 3 && rtw_get_passing_time_ms(fwdl_start_time) > 500)
 		)
 			break;
-
-		DBG_871X("%s writeFW_retry:%u, time after fwdl_start_time:%ums\n", __FUNCTION__
-			, writeFW_retry
-			, rtw_get_passing_time_ms(fwdl_start_time)
-		);
 	}
 	_FWDownloadEnable(padapter, _FALSE);
+
+	DBG_871X("%s writeFW_retry:%u, time after fwdl_start_time:%ums\n", __FUNCTION__
+		, writeFW_retry
+		, rtw_get_passing_time_ms(fwdl_start_time)
+	);
+
 	if(_SUCCESS != rtStatus){
 		DBG_871X("DL Firmware failed!\n");
 		goto Exit;
@@ -1066,7 +1067,7 @@ s32 rtl8723b_FirmwareDownload(PADAPTER padapter, BOOLEAN  bUsedWoWLANFw)
 	{
 		//rtw_write8(padapter, 0x81, rtw_read8(padapter, 0x81)|BIT0);
 		DBG_871X("rtl8723b_FirmwareDownload go to FirmwareDownloadBT !\n");
-		FirmwareDownloadBT(padapter, pBTFirmware);
+		FirmwareDownloadBT(padapter, (PRT_MP_FIRMWARE)pBTFirmware);
 	}
 #endif
 
@@ -3086,18 +3087,13 @@ u8 rtl8723b_MRateIdxToARFRId(PADAPTER padapter, u8 rate_idx)
 
 void UpdateHalRAMask8723B(PADAPTER padapter, u32 mac_id, u8 rssi_level)
 {
-	//volatile unsigned int result;
-	u8	init_rate=0;
-	u8	networkType, raid;
 	u32	mask,rate_bitmap;
 	u8	shortGIrate = _FALSE;
-	int	supportRateNum = 0;
 	struct sta_info	*psta;
 	HAL_DATA_TYPE	*pHalData = GET_HAL_DATA(padapter);
 	struct dm_priv	*pdmpriv = &pHalData->dmpriv;
 	struct mlme_ext_priv	*pmlmeext = &padapter->mlmeextpriv;
 	struct mlme_ext_info	*pmlmeinfo = &(pmlmeext->mlmext_info);
-	WLAN_BSSID_EX 		*cur_network = &(pmlmeinfo->network);
 
 	DBG_871X("%s(): mac_id=%d rssi_level=%d\n", __func__, mac_id, rssi_level);
 
@@ -3112,58 +3108,14 @@ void UpdateHalRAMask8723B(PADAPTER padapter, u32 mac_id, u8 rssi_level)
 		return;
 	}
 
-	switch (mac_id)
-	{
-		case 0:// for infra mode
-#ifdef CONFIG_CONCURRENT_MODE
-		case 2:// first station uses macid=0, second station uses macid=2
-#endif
-			supportRateNum = rtw_get_rateset_len(cur_network->SupportedRates);
-			networkType = judge_network_type(padapter, cur_network->SupportedRates, supportRateNum) & 0xf;
-			//pmlmeext->cur_wireless_mode = networkType;
-			raid = rtw_hal_networktype_to_raid(padapter, networkType);
+	shortGIrate = query_ra_short_GI(psta);
 
-			mask = update_supported_rate(cur_network->SupportedRates, supportRateNum);
-			mask |= (pmlmeinfo->HT_enable)? update_MCS_rate(&(pmlmeinfo->HT_caps)): 0;
+	mask = psta->ra_mask;
 
-			if (support_short_GI(padapter, &(pmlmeinfo->HT_caps), pmlmeext->cur_bwmode))
-			{
-				shortGIrate = _TRUE;
-			}
-
-			break;
-
-		case 1://for broadcast/multicast
-			supportRateNum = rtw_get_rateset_len(pmlmeinfo->FW_sta_info[mac_id].SupportedRates);
-			if(pmlmeext->cur_wireless_mode & WIRELESS_11B)
-				networkType = WIRELESS_11B;
-			else
-				networkType = WIRELESS_11G;
-			raid = rtw_hal_networktype_to_raid(padapter, networkType);
-
-			mask = update_basic_rate(cur_network->SupportedRates, supportRateNum);
-
-			DBG_871X("%s(): BC/MC Data, raid=%d mask=%.8x\n", __func__, raid, mask);
-			break;
-
-		default: //for each sta in IBSS
-			supportRateNum = rtw_get_rateset_len(pmlmeinfo->FW_sta_info[mac_id].SupportedRates);
-			networkType = judge_network_type(padapter, pmlmeinfo->FW_sta_info[mac_id].SupportedRates, supportRateNum) & 0xf;
-			//pmlmeext->cur_wireless_mode = networkType;
-			raid = rtw_hal_networktype_to_raid(padapter, networkType);
-
-			mask = update_supported_rate(cur_network->SupportedRates, supportRateNum);
-
-			//todo: support HT in IBSS
-
-			break;
-	}
-	//mask &=0x0fffffff;
-	rate_bitmap = 0x0fffffff;
-
-	rate_bitmap = ODM_Get_Rate_Bitmap(&pHalData->odmpriv,mac_id, mask, rssi_level);
-	DBG_8192C("%s => mac_id:%d, networkType:0x%02x, mask:0x%08x\n\t ==> rssi_level:%d, rate_bitmap:0x%08x\n",
-		__FUNCTION__,mac_id,networkType,mask,rssi_level,rate_bitmap);
+	rate_bitmap = 0xffffffff;
+	rate_bitmap = ODM_Get_Rate_Bitmap(&pHalData->odmpriv,mac_id,mask,rssi_level);
+	DBG_871X("%s => mac_id:%d, networkType:0x%02x, mask:0x%08x\n\t ==> rssi_level:%d, rate_bitmap:0x%08x\n",
+			__FUNCTION__,mac_id,psta->wireless_mode,mask,rssi_level,rate_bitmap);
 
 	mask &= rate_bitmap;
 
@@ -3171,11 +3123,6 @@ void UpdateHalRAMask8723B(PADAPTER padapter, u32 mac_id, u8 rssi_level)
 	rate_bitmap = rtw_btcoex_GetRaMask(padapter);
 	mask &= ~rate_bitmap;
 #endif // CONFIG_BT_COEXIST
-
-	init_rate = get_highest_rate_idx(mask)&0x3f;
-	//raid = rtl8723b_MRateIdxToARFRId(padapter, raid);
-	//if (shortGIrate==_TRUE)
-	//	raid |= BIT(7);
 
 #ifdef CONFIG_CMCC_TEST
 #ifdef CONFIG_BT_COEXIST
@@ -3189,18 +3136,15 @@ void UpdateHalRAMask8723B(PADAPTER padapter, u32 mac_id, u8 rssi_level)
 	}
 #endif
 #endif
+
 	if(pHalData->fw_ractrl == _TRUE)
 	{
-		rtl8723b_set_FwMacIdConfig_cmd(padapter, mac_id, raid, pmlmeext->cur_bwmode, shortGIrate, mask);
+		rtl8723b_set_FwMacIdConfig_cmd(padapter, mac_id, psta->raid, psta->bw_mode, shortGIrate, mask);
 	}
 
-	//set ra_id
-	psta->raid = raid;
-	psta->init_rate = init_rate;
-
 	//set correct initial date rate for each mac_id
-	pdmpriv->INIDATA_RATE[mac_id] = init_rate;
-	DBG_871X("%s(): mac_id=%d raid=0x%x bw=%d mask=0x%x init_rate=0x%x\n", __func__, mac_id, raid, pmlmeext->cur_bwmode, mask, init_rate);
+	pdmpriv->INIDATA_RATE[mac_id] = psta->init_rate;
+	DBG_871X("%s(): mac_id=%d raid=0x%x bw=%d mask=0x%x init_rate=0x%x\n", __func__, mac_id, psta->raid, psta->bw_mode, mask, psta->init_rate);
 }
 
 
@@ -4222,6 +4166,50 @@ Hal_EfuseParseEEPROMVer_8723B(
 		pHalData->EEPROMVersion));
 }
 
+
+
+VOID
+Hal_EfuseParsePackageType_8723B(
+	IN	PADAPTER		pAdapter,
+	IN	u8*				hwinfo,
+	IN	BOOLEAN 	AutoLoadFail
+	)
+{
+	HAL_DATA_TYPE	*pHalData = GET_HAL_DATA(pAdapter);
+	u1Byte			package;
+	u8 efuseContent;
+
+	Efuse_PowerSwitch(pAdapter, _FALSE, _TRUE);
+	efuse_OneByteRead(pAdapter, 0x1FB, &efuseContent, FALSE);
+	DBG_871X("%s phy efuse read 0x1FB =%x \n",__func__,efuseContent);
+	Efuse_PowerSwitch(pAdapter, _FALSE, _FALSE);
+
+	package = efuseContent & 0x7;
+	switch (package)
+	{
+		case 0x4:
+			pHalData->PackageType = PACKAGE_TFBGA79;
+			break;
+		case 0x5:
+			pHalData->PackageType = PACKAGE_TFBGA90;
+			break;
+		case 0x6:
+			pHalData->PackageType = PACKAGE_QFN68;
+			break;
+		case 0x7:
+			pHalData->PackageType = PACKAGE_TFBGA79;
+			break;
+
+		default:
+			pHalData->PackageType = PACKAGE_TFBGA79;
+			break;
+	}
+
+	DBG_871X("PackageType = 0x%X\n", pHalData->PackageType);
+}
+
+
+
 VOID
 Hal_EfuseParseChnlPlan_8723B(
 	IN	PADAPTER		padapter,
@@ -4229,18 +4217,11 @@ Hal_EfuseParseChnlPlan_8723B(
 	IN	BOOLEAN			AutoLoadFail
 	)
 {
-//	RT_TRACE(_module_hci_hal_init_c_, _drv_notice_, ("%s(): AutoLoadFail = %d\n", __func__, AutoLoadFail));
-
-	if (!hwinfo)
-		AutoLoadFail = _TRUE;
-	else if (hwinfo[EEPROM_ChannelPlan_8723B] == 0xFF)
-		AutoLoadFail = _TRUE;
-
-	padapter->mlmepriv.ChannelPlan = hal_com_get_channel_plan(
+	padapter->mlmepriv.ChannelPlan = hal_com_config_channel_plan(
 		padapter
 		, hwinfo?hwinfo[EEPROM_ChannelPlan_8723B]:0xFF
 		, padapter->registrypriv.channel_plan
-		, RT_CHANNEL_DOMAIN_WORLD_WIDE_13
+		, RT_CHANNEL_DOMAIN_WORLD_NULL
 		, AutoLoadFail
 	);
 

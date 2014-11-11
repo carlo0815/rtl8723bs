@@ -1386,6 +1386,15 @@ phy_SwChnlAndSetBwMode8723B(
 	HAL_DATA_TYPE		*pHalData = GET_HAL_DATA(Adapter);
 
 	//RT_TRACE(COMP_SCAN, DBG_LOUD, ("phy_SwChnlAndSetBwMode8723B(): bSwChnl %d, bSetChnlBW %d \n", pHalData->bSwChnl, pHalData->bSetChnlBW));
+	if ( Adapter->bNotifyChannelChange )
+	{
+		DBG_871X( "[%s] bSwChnl=%d, ch=%d, bSetChnlBW=%d, bw=%d\n",
+			__FUNCTION__,
+			pHalData->bSwChnl,
+			pHalData->CurrentChannel,
+			pHalData->bSetChnlBW,
+			pHalData->CurrentChannelBW);
+	}
 
 	if((Adapter->bDriverStopped) || (Adapter->bSurpriseRemoved))
 	{

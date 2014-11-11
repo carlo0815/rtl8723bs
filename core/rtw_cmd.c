@@ -450,6 +450,7 @@ thread_return rtw_cmd_thread(thread_context context)
 	void (*pcmd_callback)(_adapter *dev, struct cmd_obj *pcmd);
 	PADAPTER padapter = (PADAPTER)context;
 	struct cmd_priv *pcmdpriv = &(padapter->cmdpriv);
+	struct drvextra_cmd_parm *extra_parm = NULL;
 
 _func_enter_;
 
@@ -563,7 +564,21 @@ post_process:
 
 		if((cmd_process_time = rtw_get_passing_time_ms(cmd_start_time)) > 1000)
 		{
-			DBG_871X("cmd=%d, process_time=%d > 1 sec\n", pcmd->cmdcode, cmd_process_time);
+			if (pcmd->cmdcode == GEN_CMD_CODE(_Set_Drv_Extra)) {
+				struct drvextra_cmd_parm *drvextra_parm = (struct drvextra_cmd_parm *)pcmdbuf;
+				DBG_871X(ADPT_FMT" cmd=%d,%d,%d process_time=%d > 1 sec\n",
+					ADPT_ARG(pcmd->padapter), pcmd->cmdcode, drvextra_parm->ec_id, drvextra_parm->type, cmd_process_time);
+				//rtw_warn_on(1);
+			} else if(pcmd->cmdcode == GEN_CMD_CODE(_Set_MLME_EVT)){
+				struct C2HEvent_Header *pc2h_evt_hdr = (struct C2HEvent_Header *)pcmdbuf;
+				DBG_871X(ADPT_FMT" cmd=%d,%d, process_time=%d > 1 sec\n",
+					ADPT_ARG(pcmd->padapter), pcmd->cmdcode, pc2h_evt_hdr->ID, cmd_process_time);
+				//rtw_warn_on(1);
+			} else {
+				DBG_871X(ADPT_FMT" cmd=%d, process_time=%d > 1 sec\n",
+					ADPT_ARG(pcmd->padapter), pcmd->cmdcode, cmd_process_time);
+				//rtw_warn_on(1);
+			}
 		}
 
 		//call callback function for post-processed
@@ -605,7 +620,14 @@ post_process:
 			break;
 		}
 
-		//DBG_871X("%s: leaving... drop cmdcode:%u\n", __FUNCTION__, pcmd->cmdcode);
+		//DBG_871X("%s: leaving... drop cmdcode:%u size:%d\n", __FUNCTION__, pcmd->cmdcode, pcmd->cmdsz);
+
+		if (pcmd->cmdcode == GEN_CMD_CODE(_Set_Drv_Extra)) {
+			extra_parm = (struct drvextra_cmd_parm *)pcmd->parmbuf;
+			if(extra_parm->pbuf && extra_parm->size > 0) {
+				rtw_mfree(extra_parm->pbuf, extra_parm->size);
+			}
+		}
 
 		rtw_free_cmd_obj(pcmd);
 	}while(1);
@@ -2030,7 +2052,7 @@ _func_exit_;
 	return res;
 }
 
-u8 rtw_set_chplan_cmd(_adapter*padapter, u8 chplan, u8 enqueue)
+u8 rtw_set_chplan_cmd(_adapter*padapter, u8 chplan, u8 enqueue, u8 swconfig)
 {
 	struct	cmd_obj*	pcmdobj;
 	struct	SetChannelPlan_param *setChannelPlan_param;
@@ -2041,6 +2063,13 @@ u8 rtw_set_chplan_cmd(_adapter*padapter, u8 chplan, u8 enqueue)
 _func_enter_;
 
 	RT_TRACE(_module_rtl871x_cmd_c_, _drv_notice_, ("+rtw_set_chplan_cmd\n"));
+
+	// check if allow software config
+	if (swconfig && rtw_hal_is_disable_sw_channel_plan(padapter) == _TRUE)
+	{
+		res = _FAIL;
+		goto exit;
+	}
 
 	//check input parameter
 	if(!rtw_is_channel_plan_valid(chplan)) {
@@ -2209,6 +2238,51 @@ _func_exit_;
 	return res;
 }
 
+static void collect_traffic_statistics(_adapter *padapter)
+{
+	struct dvobj_priv	*pdvobjpriv = adapter_to_dvobj(padapter);
+
+#ifdef CONFIG_CONCURRENT_MODE
+	if (padapter->adapter_type != PRIMARY_ADAPTER)
+		return;
+#endif
+
+	// Tx
+	pdvobjpriv->traffic_stat.tx_bytes = padapter->xmitpriv.tx_bytes;
+	pdvobjpriv->traffic_stat.tx_pkts = padapter->xmitpriv.tx_pkts;
+	pdvobjpriv->traffic_stat.tx_drop = padapter->xmitpriv.tx_drop;
+
+	// Rx
+	pdvobjpriv->traffic_stat.rx_bytes = padapter->recvpriv.rx_bytes;
+	pdvobjpriv->traffic_stat.rx_pkts = padapter->recvpriv.rx_pkts;
+	pdvobjpriv->traffic_stat.rx_drop = padapter->recvpriv.rx_drop;
+
+#ifdef CONFIG_CONCURRENT_MODE
+	// Add secondary adapter statistics
+	if(rtw_buddy_adapter_up(padapter))
+	{
+		// Tx
+		pdvobjpriv->traffic_stat.tx_bytes += padapter->pbuddy_adapter->xmitpriv.tx_bytes;
+		pdvobjpriv->traffic_stat.tx_pkts += padapter->pbuddy_adapter->xmitpriv.tx_pkts;
+		pdvobjpriv->traffic_stat.tx_drop += padapter->pbuddy_adapter->xmitpriv.tx_drop;
+
+		// Rx
+		pdvobjpriv->traffic_stat.rx_bytes += padapter->pbuddy_adapter->recvpriv.rx_bytes;
+		pdvobjpriv->traffic_stat.rx_pkts += padapter->pbuddy_adapter->recvpriv.rx_pkts;
+		pdvobjpriv->traffic_stat.rx_drop += padapter->pbuddy_adapter->recvpriv.rx_drop;
+	}
+#endif
+
+	// Calculate throughput in last interval
+	pdvobjpriv->traffic_stat.cur_tx_bytes = pdvobjpriv->traffic_stat.tx_bytes - pdvobjpriv->traffic_stat.last_tx_bytes;
+	pdvobjpriv->traffic_stat.cur_rx_bytes = pdvobjpriv->traffic_stat.rx_bytes - pdvobjpriv->traffic_stat.last_rx_bytes;
+	pdvobjpriv->traffic_stat.last_tx_bytes = pdvobjpriv->traffic_stat.tx_bytes;
+	pdvobjpriv->traffic_stat.last_rx_bytes = pdvobjpriv->traffic_stat.rx_bytes;
+
+	pdvobjpriv->traffic_stat.cur_tx_tp = (u32)(pdvobjpriv->traffic_stat.cur_tx_bytes *8/2/1024/1024);
+	pdvobjpriv->traffic_stat.cur_rx_tp = (u32)(pdvobjpriv->traffic_stat.cur_rx_bytes *8/2/1024/1024);
+}
+
 u8 traffic_status_watchdog(_adapter *padapter, u8 from_timer)
 {
 	u8	bEnterPS = _FALSE;
@@ -2223,13 +2297,14 @@ u8 traffic_status_watchdog(_adapter *padapter, u8 from_timer)
 
 	RT_LINK_DETECT_T * link_detect = &pmlmepriv->LinkDetectInfo;
 
+	collect_traffic_statistics(padapter);
+
 	//
 	// Determine if our traffic is busy now
 	//
 	if((check_fwstate(pmlmepriv, _FW_LINKED)== _TRUE)
 		/*&& !MgntInitAdapterInProgress(pMgntInfo)*/)
 	{
-
 #ifdef CONFIG_BT_COEXIST
 		if( pmlmepriv->LinkDetectInfo.NumRxOkInPeriod > 25 ||
 			pmlmepriv->LinkDetectInfo.NumTxOkInPeriod > 25 )
@@ -2292,7 +2367,7 @@ u8 traffic_status_watchdog(_adapter *padapter, u8 from_timer)
 		if( ((pmlmepriv->LinkDetectInfo.NumRxUnicastOkInPeriod + pmlmepriv->LinkDetectInfo.NumTxOkInPeriod) > 8 ) ||
 			(pmlmepriv->LinkDetectInfo.NumRxUnicastOkInPeriod > 2) )
 		{
-			DBG_871X("(-)Tx = %d, Rx = %d \n",pmlmepriv->LinkDetectInfo.NumTxOkInPeriod,pmlmepriv->LinkDetectInfo.NumRxUnicastOkInPeriod);
+			//DBG_871X("(-)Tx = %d, Rx = %d \n",pmlmepriv->LinkDetectInfo.NumTxOkInPeriod,pmlmepriv->LinkDetectInfo.NumRxUnicastOkInPeriod);
 			bEnterPS= _FALSE;
 
 			if(bBusyTraffic == _TRUE)
@@ -2302,7 +2377,7 @@ u8 traffic_status_watchdog(_adapter *padapter, u8 from_timer)
 
 				pmlmepriv->LinkDetectInfo.TrafficTransitionCount++;
 
-				DBG_871X("Set TrafficTransitionCount to %d\n", pmlmepriv->LinkDetectInfo.TrafficTransitionCount);
+				//DBG_871X("Set TrafficTransitionCount to %d\n", pmlmepriv->LinkDetectInfo.TrafficTransitionCount);
 
 				if(pmlmepriv->LinkDetectInfo.TrafficTransitionCount > 30/*TrafficTransitionLevel*/)
 				{
@@ -2312,7 +2387,7 @@ u8 traffic_status_watchdog(_adapter *padapter, u8 from_timer)
 		}
 		else
 		{
-			DBG_871X("(+)Tx = %d, Rx = %d \n",pmlmepriv->LinkDetectInfo.NumTxOkInPeriod,pmlmepriv->LinkDetectInfo.NumRxUnicastOkInPeriod);
+			//DBG_871X("(+)Tx = %d, Rx = %d \n",pmlmepriv->LinkDetectInfo.NumTxOkInPeriod,pmlmepriv->LinkDetectInfo.NumRxUnicastOkInPeriod);
 
 			if(pmlmepriv->LinkDetectInfo.TrafficTransitionCount>=2)
 				pmlmepriv->LinkDetectInfo.TrafficTransitionCount -=2;
@@ -2321,14 +2396,30 @@ u8 traffic_status_watchdog(_adapter *padapter, u8 from_timer)
 
 			if(pmlmepriv->LinkDetectInfo.TrafficTransitionCount == 0)
 				bEnterPS= _TRUE;
-
 		}
+
+#ifdef CONFIG_DYNAMIC_DTIM
+		if(pmlmepriv->LinkDetectInfo.LowPowerTransitionCount == 8)
+			bEnterPS= _FALSE;
+
+		DBG_871X("LowPowerTransitionCount=%d\n", pmlmepriv->LinkDetectInfo.LowPowerTransitionCount);
+#endif //CONFIG_DYNAMIC_DTIM
 
 		// LeisurePS only work in infra mode.
 		if(bEnterPS)
 		{
 			if(!from_timer)
 			{
+#ifdef CONFIG_DYNAMIC_DTIM
+				if(pmlmepriv->LinkDetectInfo.LowPowerTransitionCount < 8)
+				{
+					adapter_to_pwrctl(padapter)->dtim = 1;
+				}
+				else
+				{
+					adapter_to_pwrctl(padapter)->dtim = 3;
+				}
+#endif //CONFIG_DYNAMIC_DTIM
 				LPS_Enter(padapter, "TRAFFIC_IDLE");
 			}
 			else
@@ -2337,9 +2428,19 @@ u8 traffic_status_watchdog(_adapter *padapter, u8 from_timer)
 				//rtw_lps_ctrl_wk_cmd(adapter, LPS_CTRL_ENTER, 1);
 				//rtw_hal_dm_watchdog_in_lps(padapter);
 			}
+#ifdef CONFIG_DYNAMIC_DTIM
+			if (adapter_to_pwrctl(padapter)->bFwCurrentInPSMode ==_TRUE )
+				pmlmepriv->LinkDetectInfo.LowPowerTransitionCount++;
+#endif //CONFIG_DYNAMIC_DTIM
 		}
 		else
 		{
+#ifdef CONFIG_DYNAMIC_DTIM
+			if(pmlmepriv->LinkDetectInfo.LowPowerTransitionCount != 8)
+				pmlmepriv->LinkDetectInfo.LowPowerTransitionCount = 0;
+			else
+				pmlmepriv->LinkDetectInfo.LowPowerTransitionCount++;
+#endif //CONFIG_DYNAMIC_DTIM
 			if(!from_timer)
 			{
 				LPS_Leave(padapter, "TRAFFIC_BUSY");
@@ -2886,7 +2987,7 @@ static void rtw_chk_hi_queue_hdl(_adapter *padapter)
 			pstapriv->tim_bitmap &= ~BIT(0);
 			pstapriv->sta_dz_bitmap &= ~BIT(0);
 
-			update_beacon(padapter, _TIM_IE_, NULL, _FALSE);
+			update_beacon(padapter, _TIM_IE_, NULL, _TRUE);
 		}
 		else //re check again
 		{
@@ -3120,12 +3221,14 @@ u8 rtw_drvextra_cmd_hdl(_adapter *padapter, unsigned char *pbuf)
 		case P2P_PS_WK_CID:
 			p2p_ps_wk_hdl(padapter, pdrvextra_cmd->type);
 			break;
-#endif // CONFIG_P2P_PS
+#endif //CONFIG_P2P_PS
+#ifdef CONFIG_P2P
 		case P2P_PROTO_WK_CID:
 			//	Commented by Albert 2011/07/01
 			//	I used the type_size as the type command
 			p2p_protocol_wk_hdl( padapter, pdrvextra_cmd->type );
 			break;
+#endif //CONFIG_P2P
 #ifdef CONFIG_AP_MODE
 		case CHECK_HIQ_WK_CID:
 			rtw_chk_hi_queue_hdl(padapter);

@@ -362,6 +362,9 @@ typedef enum _HARDWARE_TYPE{
 	HARDWARE_TYPE_RTL8723BE,
 	HARDWARE_TYPE_RTL8723BU,
 	HARDWARE_TYPE_RTL8723BS,
+	HARDWARE_TYPE_RTL8813AE,
+	HARDWARE_TYPE_RTL8813AU,
+	HARDWARE_TYPE_RTL8813AS,
 
 	HARDWARE_TYPE_MAX,
 }HARDWARE_TYPE;
@@ -441,6 +444,15 @@ typedef enum _HARDWARE_TYPE{
 #define IS_HARDWARE_TYPE_8723B(_Adapter) \
 	(IS_HARDWARE_TYPE_8723BE(_Adapter) || IS_HARDWARE_TYPE_8723BU(_Adapter) ||IS_HARDWARE_TYPE_8723BS(_Adapter))
 
+//RTL8813A Series
+#define IS_HARDWARE_TYPE_8813AE(_Adapter)		(((PADAPTER)_Adapter)->HardwareType==HARDWARE_TYPE_RTL8813AE)
+#define IS_HARDWARE_TYPE_8813AU(_Adapter)		(((PADAPTER)_Adapter)->HardwareType==HARDWARE_TYPE_RTL8813AU)
+#define IS_HARDWARE_TYPE_8813AS(_Adapter)		(((PADAPTER)_Adapter)->HardwareType==HARDWARE_TYPE_RTL8813AS)
+
+#define IS_HARDWARE_TYPE_8813A(_Adapter)		\
+(IS_HARDWARE_TYPE_8813AE(_Adapter) || IS_HARDWARE_TYPE_8813AU(_Adapter) ||IS_HARDWARE_TYPE_8813AS(_Adapter))
+
+
 typedef struct eeprom_priv EEPROM_EFUSE_PRIV, *PEEPROM_EFUSE_PRIV;
 #define GET_EEPROM_EFUSE_PRIV(adapter) (&adapter->eeprompriv)
 #define is_boot_from_eeprom(adapter) (adapter->eeprompriv.EepromOrEfuse)
@@ -477,6 +489,7 @@ struct wowlan_ioctl_param{
 #define Rx_MagicPkt				0x21
 #define Rx_UnicastPkt			0x22
 #define Rx_PatternPkt			0x23
+#define	RX_PNOWakeUp			0x55
 #endif // CONFIG_WOWLAN
 
 void rtw_hal_def_value_init(_adapter *padapter);
@@ -598,6 +611,8 @@ bool rtw_hal_c2h_valid(_adapter *adapter, u8 *buf);
 s32 rtw_hal_c2h_evt_read(_adapter *adapter, u8 *buf);
 s32 rtw_hal_c2h_handler(_adapter *adapter, u8 *c2h_evt);
 c2h_id_filter rtw_hal_c2h_id_filter_ccx(_adapter *adapter);
+
+s32 rtw_hal_is_disable_sw_channel_plan(PADAPTER padapter);
 
 #ifdef CONFIG_BT_COEXIST
 s32 rtw_hal_fill_h2c_cmd(PADAPTER, u8 ElementID, u32 CmdLen, u8 *pCmdBuffer);

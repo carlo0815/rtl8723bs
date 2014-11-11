@@ -102,10 +102,10 @@ int cckratesonly_included(unsigned char *rate, int ratelen)
 	return _TRUE;
 }
 
-u8 networktype_to_raid(_adapter *adapter,unsigned char network_type)
+u8 networktype_to_raid(_adapter *adapter,struct sta_info *psta)
 {
 	unsigned char raid;
-	switch(network_type)
+	switch(psta->wireless_mode)
 	{
 		case WIRELESS_11B:
 			raid = RATR_INX_WIRELESS_B;
@@ -137,14 +137,26 @@ u8 networktype_to_raid(_adapter *adapter,unsigned char network_type)
 
 }
 
-u8 networktype_to_raid_ex(_adapter *adapter,unsigned char network_type)
+u8 networktype_to_raid_ex(_adapter *adapter, struct sta_info *psta)
 {
 	struct mlme_ext_priv	*pmlmeext = &adapter->mlmeextpriv;
-	u8 raid, rf_type;
+	u8 raid, cur_rf_type, rf_type= RF_1T1R;
 
-	rtw_hal_get_hwreg(adapter, HW_VAR_RF_TYPE, (u8 *)(&rf_type));
+	rtw_hal_get_hwreg(adapter, HW_VAR_RF_TYPE, (u8 *)(&cur_rf_type));
 
-	switch(network_type)
+	if(cur_rf_type == RF_1T1R) {
+		rf_type = RF_1T1R;
+	}
+	else if(IsSupportedVHT(psta->wireless_mode)) {
+		if(psta->ra_mask & 0xffc00000)
+			rf_type = RF_2T2R;
+	}
+	else if(IsSupportedHT(psta->wireless_mode)) {
+		if(psta->ra_mask & 0xfff00000)
+			rf_type = RF_2T2R;
+	}
+
+	switch(psta->wireless_mode)
 	{
 		case WIRELESS_11B:
 			raid = RATEID_IDX_B;
@@ -160,14 +172,14 @@ u8 networktype_to_raid_ex(_adapter *adapter,unsigned char network_type)
 		case WIRELESS_11_5N:
 		case WIRELESS_11A_5N:
 		case WIRELESS_11G_24N:
-			if (rf_type == 2)
+			if (rf_type == RF_2T2R)
 				raid = RATEID_IDX_GN_N2SS;
 			else
 				raid = RATEID_IDX_GN_N1SS;
 			break;
 		case WIRELESS_11B_24N:
 		case WIRELESS_11BG_24N:
-			if (pmlmeext->cur_bwmode == CHANNEL_WIDTH_20) {
+			if (psta->bw_mode == CHANNEL_WIDTH_20) {
 				if (rf_type == RF_2T2R)
 					raid = RATEID_IDX_BGN_20M_2SS_BN;
 				else
@@ -187,7 +199,7 @@ u8 networktype_to_raid_ex(_adapter *adapter,unsigned char network_type)
 				raid = RATEID_IDX_VHT_2SS;
 			break;
 		case WIRELESS_11_24AC:
-			if (pmlmeext->cur_bwmode > CHANNEL_WIDTH_80)
+			if (psta->bw_mode >= CHANNEL_WIDTH_80)
 			{
 				if (rf_type == RF_1T1R)
 					raid = RATEID_IDX_VHT_1SS;
@@ -1256,6 +1268,7 @@ static void bwmode_update_check(_adapter *padapter, PNDIS_802_11_VARIABLE_IEs pI
 				break;
 
 			default:
+				new_bwmode = CHANNEL_WIDTH_20;
 				new_ch_offset = HAL_PRIME_CHNL_OFFSET_DONT_CARE;
 				break;
 		}
@@ -2532,19 +2545,18 @@ void fire_write_MAC_cmd(_adapter *padapter, unsigned int addr, unsigned int valu
 #endif
 }
 
-void update_bmc_sta_support_rate(_adapter *padapter, u32 mac_id)
+void update_sta_basic_rate(struct sta_info *psta, u8 wireless_mode)
 {
-	struct mlme_ext_priv	*pmlmeext = &(padapter->mlmeextpriv);
-	struct mlme_ext_info	*pmlmeinfo = &(pmlmeext->mlmext_info);
-
-	if(pmlmeext->cur_wireless_mode & WIRELESS_11B)
+	if(IsSupportedTxCCK(wireless_mode))
 	{
 		// Only B, B/G, and B/G/N AP could use CCK rate
-		_rtw_memcpy((pmlmeinfo->FW_sta_info[mac_id].SupportedRates), rtw_basic_rate_cck, 4);
+		_rtw_memcpy(psta->bssrateset, rtw_basic_rate_cck, 4);
+		psta->bssratelen = 4;
 	}
 	else
 	{
-		_rtw_memcpy((pmlmeinfo->FW_sta_info[mac_id].SupportedRates), rtw_basic_rate_ofdm, 4);
+		_rtw_memcpy(psta->bssrateset, rtw_basic_rate_ofdm, 3);
+		psta->bssratelen = 3;
 	}
 }
 
@@ -3030,7 +3042,8 @@ void rtw_get_sec_iv(PADAPTER padapter, u8*pcur_dot11txpn, u8 *StaAddr)
 		return;
 	psta = rtw_get_stainfo(&padapter->stapriv, StaAddr);
 	DBG_871X("%s(): StaAddr: %02x %02x %02x %02x %02x %02x\n",
-		__func__, StaAddr[0], StaAddr[1], StaAddr[2], StaAddr[3], StaAddr[4], StaAddr[5]);
+		__func__, StaAddr[0], StaAddr[1], StaAddr[2],
+		StaAddr[3], StaAddr[4], StaAddr[5]);
 
 	if(psta)
 	{
@@ -3039,8 +3052,9 @@ void rtw_get_sec_iv(PADAPTER padapter, u8*pcur_dot11txpn, u8 *StaAddr)
 		AES_IV(pcur_dot11txpn, psta->dot11txpn, 0);
 
 		DBG_871X("%s(): CurrentIV: %02x %02x %02x %02x %02x %02x %02x %02x \n"
-		, __func__, pcur_dot11txpn[0],pcur_dot11txpn[1],pcur_dot11txpn[2],pcur_dot11txpn[3]
-		,pcur_dot11txpn[4],pcur_dot11txpn[5],pcur_dot11txpn[6],pcur_dot11txpn[7]);
+		, __func__, pcur_dot11txpn[0],pcur_dot11txpn[1],
+		pcur_dot11txpn[2],pcur_dot11txpn[3], pcur_dot11txpn[4],
+		pcur_dot11txpn[5],pcur_dot11txpn[6],pcur_dot11txpn[7]);
 	}
 }
 void rtw_set_sec_pn(PADAPTER padapter)
@@ -3051,14 +3065,21 @@ void rtw_set_sec_pn(PADAPTER padapter)
         struct pwrctrl_priv *pwrpriv = adapter_to_pwrctl(padapter);
 		struct security_priv *psecpriv = &padapter->securitypriv;
 
-        psta = rtw_get_stainfo(&padapter->stapriv, get_my_bssid(&pmlmeinfo->network));
+        psta = rtw_get_stainfo(&padapter->stapriv,
+			get_my_bssid(&pmlmeinfo->network));
 
         if(psta)
         {
 			if (pwrpriv->wowlan_fw_iv > psta->dot11txpn.val)
 			{
+#ifdef CONFIG_RTL8188E
+				/* TODO: update 8188E FW to remove this workaround.*/
+				psta->dot11txpn.val += 4;
+				DBG_871X("%s: workaround only for 8188e, txpn +=4\n", __func__);
+#else
 				if (psecpriv->dot11PrivacyAlgrthm != _NO_PRIVACY_)
 					psta->dot11txpn.val = pwrpriv->wowlan_fw_iv + 2;
+#endif
 			} else {
 				DBG_871X("%s(): FW IV is smaller than driver\n", __func__);
                 psta->dot11txpn.val += 2;
@@ -3067,3 +3088,243 @@ void rtw_set_sec_pn(PADAPTER padapter)
         }
 }
 #endif //CONFIG_WOWLAN
+
+#ifdef CONFIG_PNO_SUPPORT
+#define	CSCAN_TLV_TYPE_SSID_IE	'S'
+/*
+ *  SSIDs list parsing from cscan tlv list
+ */
+int rtw_parse_ssid_list_tlv(char** list_str, pno_ssid_t* ssid,
+	int max, int *bytes_left) {
+	char* str;
+
+	int idx = 0;
+
+	if ((list_str == NULL) || (*list_str == NULL) || (*bytes_left < 0)) {
+		DBG_871X("%s error paramters\n", __func__);
+		return -1;
+	}
+
+	str = *list_str;
+	while (*bytes_left > 0) {
+
+		if (str[0] != CSCAN_TLV_TYPE_SSID_IE) {
+			*list_str = str;
+			DBG_871X("nssid=%d left_parse=%d %d\n", idx, *bytes_left, str[0]);
+			return idx;
+		}
+
+		/* Get proper CSCAN_TLV_TYPE_SSID_IE */
+		*bytes_left -= 1;
+		str += 1;
+
+		if (str[0] == 0) {
+			/* Broadcast SSID */
+			ssid[idx].SSID_len = 0;
+			memset((char*)ssid[idx].SSID, 0x0, WLAN_SSID_MAXLEN);
+			*bytes_left -= 1;
+			str += 1;
+
+			DBG_871X("BROADCAST SCAN  left=%d\n", *bytes_left);
+		}
+		else if (str[0] <= WLAN_SSID_MAXLEN) {
+			 /* Get proper SSID size */
+			ssid[idx].SSID_len = str[0];
+			*bytes_left -= 1;
+			str += 1;
+
+			/* Get SSID */
+			if (ssid[idx].SSID_len > *bytes_left) {
+				DBG_871X("%s out of memory range len=%d but left=%d\n",
+				__func__, ssid[idx].SSID_len, *bytes_left);
+				return -1;
+			}
+
+			memcpy((char*)ssid[idx].SSID, str, ssid[idx].SSID_len);
+
+			*bytes_left -= ssid[idx].SSID_len;
+			str += ssid[idx].SSID_len;
+
+			DBG_871X("%s :size=%d left=%d\n",
+				(char*)ssid[idx].SSID, ssid[idx].SSID_len, *bytes_left);
+		}
+		else {
+			DBG_871X("### SSID size more that %d\n", str[0]);
+			return -1;
+		}
+
+		if (idx++ >  max) {
+			DBG_871X("%s number of SSIDs more that %d\n", __func__, idx);
+			return -1;
+		}
+	}
+
+	*list_str = str;
+	return idx;
+}
+
+int rtw_dev_nlo_info_set(struct pno_nlo_info *nlo_info, pno_ssid_t* ssid,
+	int num, int pno_time, int pno_repeat, int pno_freq_expo_max) {
+
+	int i = 0;
+	nlo_info->fast_scan_period = pno_time;
+	nlo_info->ssid_num = num & BIT_LEN_MASK_32(8);
+	nlo_info->slow_scan_period = (pno_time * 2);
+	nlo_info->fast_scan_iterations = 5;
+
+	//TODO: chiper array, channel list and probe index is all empty.
+	for (i = 0 ; i < num ; i++) {
+		nlo_info->ssid_length[i]
+			= ssid[i].SSID_len;
+	}
+	return 0;
+}
+
+int rtw_dev_ssid_list_set(struct pno_ssid_list *pno_ssid_list,
+	pno_ssid_t* ssid, u8 num) {
+
+	int i = 0;
+	if(num > MAX_PNO_LIST_COUNT)
+		num = MAX_PNO_LIST_COUNT;
+
+	for (i = 0 ; i < num ; i++) {
+		_rtw_memcpy(&pno_ssid_list->node[i].SSID,
+			ssid[i].SSID, ssid[i].SSID_len);
+	}
+	return 0;
+}
+
+int rtw_dev_scan_info_set(_adapter *padapter, pno_ssid_t* ssid,
+	unsigned char ch, unsigned char ch_offset, unsigned short bw_mode) {
+
+	struct pwrctrl_priv *pwrctl = adapter_to_pwrctl(padapter);
+	struct pno_scan_info *scan_info = pwrctl->pscan_info;
+	int i;
+
+	scan_info->channel_num = MAX_SCAN_LIST_COUNT;
+	scan_info->orig_ch = ch;
+	scan_info->orig_bw = bw_mode;
+	scan_info->orig_40_offset = ch_offset;
+
+	for(i = 0 ; i < scan_info->channel_num ; i++) {
+		if (i < 11)
+			scan_info->ssid_channel_info[i].active = 1;
+		else
+			scan_info->ssid_channel_info[i].active = 0;
+
+		scan_info->ssid_channel_info[i].timeout = 100;
+
+		scan_info->ssid_channel_info[i].tx_power =
+			PHY_GetTxPowerIndex(padapter, 0, 0x02, bw_mode, i+1);
+
+		scan_info->ssid_channel_info[i].channel = i+1;
+	}
+
+	DBG_871X("%s, channel_num: %d, orig_ch: %d, orig_bw: %d orig_40_offset: %d\n",
+		__func__, scan_info->channel_num, scan_info->orig_ch,
+		scan_info->orig_bw, scan_info->orig_40_offset);
+	return 0;
+}
+
+int rtw_dev_pno_set(struct net_device *net, pno_ssid_t* ssid, int num,
+	int pno_time, int pno_repeat, int pno_freq_expo_max) {
+
+	_adapter *padapter = (_adapter *)rtw_netdev_priv(net);
+	struct pwrctrl_priv *pwrctl = adapter_to_pwrctl(padapter);
+	struct mlme_ext_priv	*pmlmeext = &padapter->mlmeextpriv;
+
+	int ret = -1;
+
+	if (num == 0) {
+		DBG_871X("%s, nssid is zero, no need to setup pno ssid list\n", __func__);
+		return 0;
+	}
+
+	if (pwrctl == NULL) {
+		DBG_871X("%s, ERROR: pwrctl is NULL\n", __func__);
+		return -1;
+	} else {
+		pwrctl->pnlo_info =
+			(pno_nlo_info_t*)rtw_zmalloc(sizeof(pno_nlo_info_t));
+		pwrctl->pno_ssid_list =
+			(pno_ssid_list_t*)rtw_zmalloc(sizeof(pno_ssid_list_t));
+		pwrctl->pscan_info =
+			(pno_scan_info_t*)rtw_zmalloc(sizeof(pno_scan_info_t));
+	}
+
+	if (pwrctl->pnlo_info == NULL ||
+		pwrctl->pscan_info == NULL ||
+		pwrctl->pno_ssid_list == NULL){
+		DBG_871X("%s, ERROR: alloc nlo_info, ssid_list, scan_info fail\n", __func__);
+		return -1;
+	}
+
+	/* NLO Info */
+	ret = rtw_dev_nlo_info_set(pwrctl->pnlo_info, ssid, num,
+			pno_time, pno_repeat, pno_freq_expo_max);
+
+	/* SSID Info */
+	ret = rtw_dev_ssid_list_set(pwrctl->pno_ssid_list, ssid, num);
+
+	/* SCAN Info */
+	ret = rtw_dev_scan_info_set(padapter, ssid, pmlmeext->cur_channel,
+			pmlmeext->cur_ch_offset, pmlmeext->cur_bwmode);
+
+	DBG_871X("+%s num: %d, pno_time: %d, pno_repeat:%d, pno_freq_expo_max:%d+\n",
+		 __func__, num, pno_time, pno_repeat, pno_freq_expo_max);
+
+	return 0;
+}
+
+#ifdef CONFIG_PNO_SET_DEBUG
+void rtw_dev_pno_debug(struct net_device *net) {
+	_adapter *padapter = (_adapter *)rtw_netdev_priv(net);
+	struct pwrctrl_priv *pwrctl = adapter_to_pwrctl(padapter);
+	int i = 0, j = 0;
+
+	DBG_871X("*******NLO_INFO********\n");
+	DBG_871X("ssid_num: %d\n", pwrctl->pnlo_info->ssid_num);
+	DBG_871X("fast_scan_iterations: %d\n",
+			pwrctl->pnlo_info->fast_scan_iterations);
+	DBG_871X("fast_scan_period: %d\n", pwrctl->pnlo_info->fast_scan_period);
+	DBG_871X("slow_scan_period: %d\n", pwrctl->pnlo_info->slow_scan_period);
+	DBG_871X("ssid_length: ");
+	for (i = 0 ; i < MAX_PNO_LIST_COUNT ; i++) {
+		printk("%d, ", pwrctl->pnlo_info->ssid_length[i]);
+	}
+	DBG_871X("\n");
+
+	DBG_871X("chiper_info: ");
+	for (i = 0 ; i < MAX_PNO_LIST_COUNT ; i++) {
+		DBG_871X("%d, ", pwrctl->pnlo_info->ssid_chiper_info[i]);
+	}
+	DBG_871X("\n");
+
+	DBG_871X("channel_info: ");
+	for (i = 0 ; i < MAX_PNO_LIST_COUNT ; i++) {
+		DBG_871X("%d, ", pwrctl->pnlo_info->ssid_channel_info[i]);
+	}
+	DBG_871X("\n");
+
+	DBG_871X("******SSID_LISD******\n");
+	for (i = 0 ; i < MAX_PNO_LIST_COUNT ; i++) {
+		DBG_871X("[%d]SSID: %s \n", i,
+			pwrctl->pno_ssid_list->node[i].SSID);
+	}
+
+	DBG_871X("******SCAN_INFO******\n");
+	DBG_871X("ch_num: %d\n", pwrctl->pscan_info->channel_num);
+	DBG_871X("orig_ch: %d\n", pwrctl->pscan_info->orig_ch);
+	DBG_871X("orig bw: %d\n", pwrctl->pscan_info->orig_bw);
+	DBG_871X("orig 40 offset: %d\n", pwrctl->pscan_info->orig_40_offset);
+	for(i = 0 ; i < MAX_SCAN_LIST_COUNT ; i++) {
+		DBG_871X("[%02d] avtive:%d, timeout:%d, tx_power:%d, ch:%02d\n",
+			i, pwrctl->pscan_info->ssid_channel_info[i].active,
+			pwrctl->pscan_info->ssid_channel_info[i].timeout,
+			pwrctl->pscan_info->ssid_channel_info[i].tx_power,
+			pwrctl->pscan_info->ssid_channel_info[i].channel);
+	}
+	DBG_871X("*****************\n");
+}
+#endif //CONFIG_PNO_SET_DEBUG
+#endif //CONFIG_PNO_SUPPORT

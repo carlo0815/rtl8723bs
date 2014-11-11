@@ -21,7 +21,7 @@
 
 #include <rtl8723b_hal.h>
 
-//#define SDIO_TX_AGG_MAX		MAX_TX_AGG_PACKET_NUMBER
+//#define SDIO_TX_AGG_MAX		1 //MAX_TX_AGG_PACKET_NUMBER
 #define TX_PAGE_SIZE		PAGE_SIZE_TX_8723B
 
 
@@ -420,14 +420,15 @@ static s32 xmit_xmitframes(PADAPTER padapter, struct xmit_priv *pxmitpriv)
 	for (idx = 0; idx < hwentry; idx++)
 	{
 		phwxmit = hwxmits + inx[idx];
-
+if (padapter->mppriv.mode == 0)
+{
 		if((check_pending_xmitbuf(pxmitpriv) == _TRUE) && (padapter->mlmepriv.LinkDetectInfo.bHigherBusyTxTraffic == _TRUE)) {
 			if ((phwxmit->accnt > 0) && (phwxmit->accnt < 5)) {
 				err = -2;
 				break;
 			}
 		}
-
+}
 		_enter_critical_bh(&pxmitpriv->lock, &irql);
 
 		sta_phead = get_list_head(phwxmit->sta_queue);
@@ -759,8 +760,6 @@ s32 rtl8723bs_hal_xmit(PADAPTER padapter, struct xmit_frame *pxmitframe)
 		RT_TRACE(_module_hal_xmit_c_, _drv_err_, ("rtl8723bs_hal_xmit: enqueue xmitframe fail\n"));
 		rtw_free_xmitframe(pxmitpriv, pxmitframe);
 
-		// Trick, make the statistics correct
-		pxmitpriv->tx_pkts--;
 		pxmitpriv->tx_drop++;
 		return _TRUE;
 	}
@@ -779,8 +778,6 @@ s32	rtl8723bs_hal_xmitframe_enqueue(_adapter *padapter, struct xmit_frame *pxmit
 	{
 		rtw_free_xmitframe(pxmitpriv, pxmitframe);
 
-		// Trick, make the statistics correct
-		pxmitpriv->tx_pkts--;
 		pxmitpriv->tx_drop++;
 	}
 	else

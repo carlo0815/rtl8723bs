@@ -96,6 +96,7 @@ void devobj_deinit(struct dvobj_priv *pdvobj);
 u8 rtw_init_drv_sw(_adapter *padapter);
 u8 rtw_free_drv_sw(_adapter *padapter);
 u8 rtw_reset_drv_sw(_adapter *padapter);
+void rtw_dev_unload(PADAPTER padapter);
 
 u32 rtw_start_drv_threads(_adapter *padapter);
 void rtw_stop_drv_threads (_adapter *padapter);
@@ -154,4 +155,11 @@ void rtw_drv_free_vir_ifaces(struct dvobj_priv *dvobj);
 int rtw_drv_register_netdev(_adapter *padapter);
 void rtw_ndev_destructor(_nic_hdl ndev);
 
+#ifdef CONFIG_SUSPEND_REFINE
+int rtw_suspend_common(_adapter *padapter);
+int rtw_resume_common(_adapter *padapter);
+#endif
+
+
 #endif	//_OSDEP_INTF_H_
+

@@ -202,14 +202,6 @@ static void update_BCNTIM(_adapter *padapter)
 		pnetwork_mlmeext->IELength = offset + remainder_ielen;
 
 	}
-
-#ifndef CONFIG_INTERRUPT_BASED_TXBCN
-#if defined(CONFIG_USB_HCI) || defined(CONFIG_SDIO_HCI) || defined(CONFIG_GSPI_HCI)
-	set_tx_beacon_cmd(padapter);
-#endif
-#endif //!CONFIG_INTERRUPT_BASED_TXBCN
-
-
 }
 
 void rtw_add_bcn_ie(_adapter *padapter, WLAN_BSSID_EX *pnetwork, u8 index, u8 *data, u8 len)
@@ -440,12 +432,13 @@ void	expire_timeout_chk(_adapter *padapter)
 		psta = LIST_CONTAINOR(plist, struct sta_info, asoc_list);
 		plist = get_next(plist);
 #ifdef CONFIG_ATMEL_RC_PATCH
-		printk("Aries  %s:%d  psta=%p, %02x,%02x||%02x,%02x  \n\n",__func__,  __LINE__, psta,pstapriv->atmel_rc_pattern[0], pstapriv->atmel_rc_pattern[5], psta->hwaddr[0], psta->hwaddr[5]);
+		DBG_871X("%s:%d  psta=%p, %02x,%02x||%02x,%02x  \n\n", __func__,  __LINE__,
+			psta,pstapriv->atmel_rc_pattern[0], pstapriv->atmel_rc_pattern[5], psta->hwaddr[0], psta->hwaddr[5]);
 		if (_TRUE == _rtw_memcmp((void *)pstapriv->atmel_rc_pattern, (void *)(psta->hwaddr), ETH_ALEN))
 			continue;
 		if (psta->flag_atmel_rc)
 			continue;
-		printk("Aries debug line:%d \n", __LINE__);
+		DBG_871X("%s: debug line:%d \n", __func__, __LINE__);
 #endif
 #ifdef CONFIG_AUTO_AP_MODE
 		if(psta->isrc)
@@ -567,7 +560,7 @@ void	expire_timeout_chk(_adapter *padapter)
 
 					//to update bcn with tim_bitmap for this station
 					pstapriv->tim_bitmap |= BIT(psta->aid);
-					update_beacon(padapter, _TIM_IE_, NULL, _FALSE);
+					update_beacon(padapter, _TIM_IE_, NULL, _TRUE);
 
 					if(!pmlmeext->active_keep_alive_check)
 						continue;
@@ -623,7 +616,7 @@ if (chk_alive_num) {
 
 		psta = rtw_get_stainfo_by_offset(pstapriv, chk_alive_list[i]);
 #ifdef CONFIG_ATMEL_RC_PATCH
-		if (_TRUE = _rtw_memcmp(  pstapriv->atmel_rc_pattern, psta->hwaddr, ETH_ALEN))
+		if (_TRUE == _rtw_memcmp(  pstapriv->atmel_rc_pattern, psta->hwaddr, ETH_ALEN))
 			continue;
 		if (psta->flag_atmel_rc)
 			continue;
@@ -675,9 +668,7 @@ void add_RATid(_adapter *padapter, struct sta_info *psta, u8 rssi_level)
 {
 	int i;
 	u8 rf_type;
-	u32 init_rate=0;
-	unsigned char sta_band = 0, raid, shortGIrate = _FALSE;
-	unsigned char limit;
+	unsigned char sta_band = 0, shortGIrate = _FALSE;
 	unsigned int tx_ra_bitmap=0;
 	struct ht_priv	*psta_ht = NULL;
 	struct mlme_priv *pmlmepriv = &(padapter->mlmepriv);
@@ -692,44 +683,6 @@ void add_RATid(_adapter *padapter, struct sta_info *psta, u8 rssi_level)
 
 	if(!(psta->state & _FW_LINKED))
 		return;
-
-	//b/g mode ra_bitmap
-	for (i=0; i<sizeof(psta->bssrateset); i++)
-	{
-		if (psta->bssrateset[i])
-			tx_ra_bitmap |= rtw_get_bit_value_from_ieee_value(psta->bssrateset[i]&0x7f);
-	}
-#ifdef CONFIG_80211N_HT
-#ifdef CONFIG_80211AC_VHT
-	//AC mode ra_bitmap
-	if(psta->vhtpriv.vht_option)
-	{
-		u32	vht_bitmap = 0;
-
-		vht_bitmap = rtw_vht_rate_to_bitmap(psta->vhtpriv.vht_mcs_map);
-		tx_ra_bitmap |= (vht_bitmap << 12);
-	}
-	else
-#endif //CONFIG_80211AC_VHT
-	{
-		//n mode ra_bitmap
-		if(psta_ht->ht_option)
-		{
-			rtw_hal_get_hwreg(padapter, HW_VAR_RF_TYPE, (u8 *)(&rf_type));
-			if(rf_type == RF_2T2R)
-				limit=16;// 2R
-			else
-				limit=8;//  1R
-
-			for (i=0; i<limit; i++) {
-				if (psta_ht->ht_cap.supp_mcs_set[i/8] & BIT(i%8))
-					tx_ra_bitmap |= BIT(i+12);
-			}
-		}
-	}
-#endif //CONFIG_80211N_HT
-
-	shortGIrate = query_ra_short_GI(psta);
 
 #if 0//gtest
 	if(get_rf_mimo_mode(padapter) == RTL8712_RF_2T2R)
@@ -850,6 +803,11 @@ void add_RATid(_adapter *padapter, struct sta_info *psta, u8 rssi_level)
 	}
 #endif
 
+	rtw_hal_update_sta_rate_mask(padapter, psta);
+	tx_ra_bitmap = psta->ra_mask;
+
+	shortGIrate = query_ra_short_GI(psta);
+
 	if ( pcur_network->Configuration.DSConfig > 14 ) {
 
 		if (tx_ra_bitmap & 0xffff000)
@@ -877,37 +835,21 @@ void add_RATid(_adapter *padapter, struct sta_info *psta, u8 rssi_level)
 	}
 
 	psta->wireless_mode = sta_band;
-
-	//raid = networktype_to_raid(sta_band);
-	raid = rtw_hal_networktype_to_raid(padapter,sta_band);
-
-	init_rate = get_highest_rate_idx(tx_ra_bitmap)&0x3f;
+	psta->raid = rtw_hal_networktype_to_raid(padapter, psta);
 
 	if (psta->aid < NUM_STA)
 	{
 		u8	arg[4] = {0};
 
-		//arg[0] = macid
-		//arg[1] = raid
-		//arg[2] = shortGIrate
-		//arg[3] = init_rate
-
 		arg[0] = psta->mac_id;
-		arg[1] = raid;
+		arg[1] = psta->raid;
 		arg[2] = shortGIrate;
-		arg[3] = init_rate;
+		arg[3] = psta->init_rate;
 
 		DBG_871X("%s=> mac_id:%d , raid:%d , shortGIrate=%d, bitmap=0x%x\n",
-			__FUNCTION__ , psta->mac_id, raid ,shortGIrate, tx_ra_bitmap);
+			__FUNCTION__ , psta->mac_id, psta->raid ,shortGIrate, tx_ra_bitmap);
 
 		rtw_hal_add_ra_tid(padapter, tx_ra_bitmap, arg, rssi_level);
-
-		if (shortGIrate==_TRUE)
-			init_rate |= BIT(6);
-
-		//set ra_id, init_rate
-		psta->raid = raid;
-		psta->init_rate = init_rate;
 	}
 	else
 	{
@@ -919,9 +861,8 @@ void add_RATid(_adapter *padapter, struct sta_info *psta, u8 rssi_level)
 void update_bmc_sta(_adapter *padapter)
 {
 	_irqL	irqL;
-	u32 init_rate=0;
-	unsigned char	network_type, raid;
-	int i, supportRateNum = 0;
+	unsigned char	network_type;
+	int supportRateNum = 0;
 	unsigned int tx_ra_bitmap=0;
 	struct mlme_priv *pmlmepriv = &(padapter->mlmepriv);
 	struct mlme_ext_priv	*pmlmeext = &(padapter->mlmeextpriv);
@@ -948,40 +889,26 @@ void update_bmc_sta(_adapter *padapter)
 
 		//psta->dot118021XPrivacy = _NO_PRIVACY_;//!!! remove it, because it has been set before this.
 
-
-
 		//prepare for add_RATid
 		supportRateNum = rtw_get_rateset_len((u8*)&pcur_network->SupportedRates);
-		network_type = rtw_check_network_type((u8*)&pcur_network->SupportedRates, supportRateNum, 1);
-
-		_rtw_memcpy(psta->bssrateset, &pcur_network->SupportedRates, supportRateNum);
-		psta->bssratelen = supportRateNum;
-
-		//b/g mode ra_bitmap
-		for (i=0; i<supportRateNum; i++)
-		{
-			if (psta->bssrateset[i])
-				tx_ra_bitmap |= rtw_get_bit_value_from_ieee_value(psta->bssrateset[i]&0x7f);
-		}
-
-		if ( pcur_network->Configuration.DSConfig > 14 ) {
-			//force to A mode. 5G doesn't support CCK rates
-			network_type = WIRELESS_11A;
-			tx_ra_bitmap = 0x150; // 6, 12, 24 Mbps
-		} else {
-			//force to b mode
+		network_type = rtw_check_network_type((u8*)&pcur_network->SupportedRates, supportRateNum, pcur_network->Configuration.DSConfig);
+		if (IsSupportedTxCCK(network_type)) {
 			network_type = WIRELESS_11B;
-			tx_ra_bitmap = 0xf;
 		}
+		else if (network_type == WIRELESS_INVALID) { // error handling
+			if ( pcur_network->Configuration.DSConfig > 14 )
+				network_type = WIRELESS_11A;
+			else
+				network_type = WIRELESS_11B;
+		}
+		update_sta_basic_rate(psta, network_type);
+		psta->wireless_mode = network_type;
 
-		//tx_ra_bitmap = update_basic_rate(pcur_network->SupportedRates, supportRateNum);
+		rtw_hal_update_sta_rate_mask(padapter, psta);
+		tx_ra_bitmap = psta->ra_mask;
 
-		//raid = networktype_to_raid(network_type);
-		raid = rtw_hal_networktype_to_raid(padapter,network_type);
+		psta->raid = rtw_hal_networktype_to_raid(padapter,psta);
 
-		init_rate = get_highest_rate_idx(tx_ra_bitmap&0x0fffffff)&0x3f;
-
-		//DBG_871X("Add id %d val %08x to ratr for bmc sta\n", psta->aid, tx_ra_bitmap);
 		//ap mode
 		rtw_hal_set_odm_var(padapter, HAL_ODM_STA_INFO, psta, _TRUE);
 
@@ -989,25 +916,16 @@ void update_bmc_sta(_adapter *padapter)
 		{
 			u8	arg[4] = {0};
 
-			//arg[0] = macid
-			//arg[1] = raid
-			//arg[2] = shortGIrate
-			//arg[3] = init_rate
-
 			arg[0] = psta->mac_id;
-			arg[1] = raid;
+			arg[1] = psta->raid;
 			arg[2] = 0;
-			arg[3] = init_rate;
+			arg[3] = psta->init_rate;
 
 			DBG_871X("%s=> mac_id:%d , raid:%d , bitmap=0x%x\n",
-				__FUNCTION__ , psta->mac_id, raid , tx_ra_bitmap);
+				__FUNCTION__ , psta->mac_id, psta->raid , tx_ra_bitmap);
 
 			rtw_hal_add_ra_tid(padapter, tx_ra_bitmap, arg, 0);
 		}
-
-		//set ra_id, init_rate
-		psta->raid = raid;
-		psta->init_rate = init_rate;
 
 		rtw_sta_media_status_rpt(padapter, psta, 1);
 
@@ -1363,6 +1281,9 @@ void start_bss_network(_adapter *padapter, u8 *pbuf)
 
 	pmlmeext->cur_wireless_mode = pmlmepriv->cur_network.network_type;
 
+	//let pnetwork_mlmeext == pnetwork_mlme.
+	_rtw_memcpy(pnetwork_mlmeext, pnetwork, pnetwork->Length);
+
 	//update cur_wireless_mode
 	update_wireless_mode(padapter);
 
@@ -1373,8 +1294,6 @@ void start_bss_network(_adapter *padapter, u8 *pbuf)
 	//udpate capability after cur_wireless_mode updated
 	update_capinfo(padapter, rtw_get_capability((WLAN_BSSID_EX *)pnetwork));
 
-	//let pnetwork_mlmeext == pnetwork_mlme.
-	_rtw_memcpy(pnetwork_mlmeext, pnetwork, pnetwork->Length);
 
 #ifdef CONFIG_P2P
 	_rtw_memcpy(pwdinfo->p2p_group_ssid, pnetwork->Ssid.Ssid, pnetwork->Ssid.SsidLength);
@@ -1383,7 +1302,7 @@ void start_bss_network(_adapter *padapter, u8 *pbuf)
 
 	if(_TRUE == pmlmeext->bstart_bss)
 	{
-		update_beacon(padapter, _TIM_IE_, NULL, _FALSE);
+		update_beacon(padapter, _TIM_IE_, NULL, _TRUE);
 
 #ifndef CONFIG_INTERRUPT_BASED_TXBCN //other case will  tx beacon when bcn interrupt coming in.
 #if defined(CONFIG_USB_HCI) || defined(CONFIG_SDIO_HCI) || defined(CONFIG_GSPI_HCI)

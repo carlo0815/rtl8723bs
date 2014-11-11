@@ -289,6 +289,7 @@ static s32 pre_recv_entry(union recv_frame *precvframe, struct recv_buf	*precvbu
 static void rtl8723bs_c2h_packet_handler(PADAPTER padapter, u8 *pbuf, u16 length)
 {
 	u8 *tmpBuf=NULL;
+	u8 res = _FALSE;
 
 	if(length == 0)
 		return;
@@ -301,9 +302,12 @@ static void rtl8723bs_c2h_packet_handler(PADAPTER padapter, u8 *pbuf, u16 length
 
 	_rtw_memcpy(tmpBuf, pbuf, length);
 
-	rtw_c2h_packet_wk_cmd(padapter, tmpBuf, length);
+	res = rtw_c2h_packet_wk_cmd(padapter, tmpBuf, length);
 
-	DBG_871X("-%s()\n", __func__);
+	if (res == _FALSE && tmpBuf != NULL)
+			rtw_mfree(tmpBuf, length);
+
+	DBG_871X("-%s res(%d)\n", __func__, res);
 
 	return;
 }

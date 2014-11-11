@@ -30,13 +30,19 @@ typedef enum _RATE_SECTION {
 	OFDM,
 	HT_MCS0_MCS7,
 	HT_MCS8_MCS15,
+	HT_MCS16_MCS23,
+	HT_MCS24_MCS31,
 	VHT_1SSMCS0_1SSMCS9,
 	VHT_2SSMCS0_2SSMCS9,
+	VHT_3SSMCS0_3SSMCS9,
+	VHT_4SSMCS0_4SSMCS9,
 } RATE_SECTION;
 
 typedef enum _RF_TX_NUM {
 	RF_1TX = 0,
 	RF_2TX,
+	RF_3TX,
+	RF_4TX,
 	RF_MAX_TX_NUM,
 	RF_TX_NUM_NONIMPLEMENT,
 } RF_TX_NUM;
@@ -85,9 +91,13 @@ phy_TxPwrIdxToDbm(
 	IN	u8				TxPwrIdx
 	);
 
-VOID
-PHY_StoreTxPowerByRateBase(
-	IN	PADAPTER	pAdapter
+u8
+PHY_GetTxPowerByRateBase(
+	IN	PADAPTER		Adapter,
+	IN	u8				Band,
+	IN	u8				RfPath,
+	IN	u8				TxNum,
+	IN	RATE_SECTION	RateSection
 	);
 
 u8
@@ -111,6 +121,14 @@ PHY_GetRateValuesOfTxPowerByRate(
 u8
 PHY_GetRateIndexOfTxPowerByRate(
 	IN	u8	Rate
+	);
+
+VOID
+PHY_SetTxPowerIndexByRateSection(
+	IN	PADAPTER		pAdapter,
+	IN	u8				RFPath,
+	IN	u8				Channel,
+	IN	u8				RateSection
 	);
 
 s8
@@ -165,25 +183,19 @@ PHY_StoreTxPowerByRate(
 	IN	u32			Data
 	);
 
-void
-PHY_SetTxPowerByRateOld(
-	IN	PADAPTER	pAdapter,
-	IN	u32			RegAddr,
-	IN	u32			BitMask,
-	IN	u32			Data
-	);
-
 VOID
 PHY_TxPowerByRateConfiguration(
 	IN  PADAPTER			pAdapter
 	);
 
-VOID
-PHY_SetTxPowerIndexByRateSection(
+u8
+PHY_GetTxPowerIndexBase(
 	IN	PADAPTER		pAdapter,
 	IN	u8				RFPath,
+	IN	u8				Rate,
+	IN	CHANNEL_WIDTH	BandWidth,
 	IN	u8				Channel,
-	IN	u8				RateSection
+	OUT PBOOLEAN		bIn24G
 	);
 
 s8
@@ -219,47 +231,6 @@ PHY_InitTxPowerLimit(
 	IN	PADAPTER			Adapter
 	);
 
-VOID
-PHY_SetTxPowerByRateBase(
-	IN	PADAPTER			Adapter,
-	IN	u8					Band,
-	IN	u8					RfPath,
-	IN	RATE_SECTION		RateSection,
-	IN	u8					TxNum,
-	IN	u8					Value
-	);
-
-u8
-PHY_GetTxPowerByRateBase(
-	IN	PADAPTER		Adapter,
-	IN	u8				Band,
-	IN	u8				RfPath,
-	IN	u8				TxNum,
-	IN	RATE_SECTION	RateSection
-	);
-
-VOID
-Hal_ChannelPlanToRegulation(
-	IN	PADAPTER		Adapter,
-	IN	u16				ChannelPlan
-	);
-
-u8
-PHY_GetTxPowerIndexBase(
-	IN	PADAPTER		pAdapter,
-	IN	u8				RFPath,
-	IN	u8				Rate,
-	IN	CHANNEL_WIDTH	BandWidth,
-	IN	u8				Channel,
-	OUT PBOOLEAN		bIn24G
-	);
-
-BOOLEAN
-PHY_GetChnlIndex(
-	IN	u8 	Channel,
-	OUT u8*	ChannelIdx
-	);
-
 s8
 PHY_GetTxPowerTrackingOffset(
 	PADAPTER	pAdapter,
@@ -267,9 +238,27 @@ PHY_GetTxPowerTrackingOffset(
 	u8			RFPath
 	);
 
+u8
+PHY_GetTxPowerIndex(
+	IN	PADAPTER			pAdapter,
+	IN	u8					RFPath,
+	IN	u8					Rate,
+	IN	CHANNEL_WIDTH		BandWidth,
+	IN	u8					Channel
+	);
+
 VOID
-PHY_ConvertTxPowerByRateInDbmToRelativeValues(
-	IN	PADAPTER	pAdapter
+PHY_SetTxPowerIndex(
+	IN	PADAPTER		pAdapter,
+	IN	u32				PowerIndex,
+	IN	u8				RFPath,
+	IN	u8				Rate
+	);
+
+VOID
+Hal_ChannelPlanToRegulation(
+	IN	PADAPTER		Adapter,
+	IN	u16				ChannelPlan
 	);
 
 #ifdef CONFIG_LOAD_PHY_PARA_FROM_FILE

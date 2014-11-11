@@ -180,7 +180,11 @@ typedef enum _RT_CHANNEL_DOMAIN
 	RT_CHANNEL_DOMAIN_WORLD_ETSI9 = 0x50,
 	RT_CHANNEL_DOMAIN_WORLD_ETSI10 = 0x51,
 	RT_CHANNEL_DOMAIN_WORLD_ETSI11 = 0x52,
-	RT_CHANNEL_DOMAIN_WORLD_NCC4 = 0x53,
+	RT_CHANNEL_DOMAIN_FCC1_NCC4 = 0x53,
+	RT_CHANNEL_DOMAIN_WORLD_ETSI12 = 0x54,
+	RT_CHANNEL_DOMAIN_FCC1_FCC9 = 0x55,
+	RT_CHANNEL_DOMAIN_WORLD_ETSI13 = 0x56,
+	RT_CHANNEL_DOMAIN_FCC1_FCC10 = 0x57,
 	//===== Add new channel plan above this line===============//
 	RT_CHANNEL_DOMAIN_MAX,
 	RT_CHANNEL_DOMAIN_REALTEK_DEFINE = 0x7F,
@@ -227,11 +231,17 @@ typedef enum _RT_CHANNEL_DOMAIN_5G
 	RT_CHANNEL_DOMAIN_5G_ETSI8 = 0x17,		//Jordan
 	RT_CHANNEL_DOMAIN_5G_ETSI9 = 0x18,		//Lebanon
 	RT_CHANNEL_DOMAIN_5G_ETSI10 = 0x19,		//Qatar
+	RT_CHANNEL_DOMAIN_5G_ETSI11 = 0x1A,		//Russia
+	RT_CHANNEL_DOMAIN_5G_NCC4 = 0x1B,		//Taiwan, (w/o Weather radar)
+	RT_CHANNEL_DOMAIN_5G_ETSI12 = 0x1C,		//Indonesia
+	RT_CHANNEL_DOMAIN_5G_FCC9 = 0x1D,		//(w/o Weather radar)
+	RT_CHANNEL_DOMAIN_5G_ETSI13 = 0x1E,		//(w/o Weather radar)
+	RT_CHANNEL_DOMAIN_5G_FCC10 = 0x1F,		//Argentina (w/o Weather radar)
 	//===== Add new channel plan above this line===============//
 	//===== Driver Self Defined =====//
-	RT_CHANNEL_DOMAIN_5G_FCC = 0x1A,
-	RT_CHANNEL_DOMAIN_5G_JAPAN_NO_DFS = 0x1B,
-	RT_CHANNEL_DOMAIN_5G_FCC4_NO_DFS = 0x1C,
+	RT_CHANNEL_DOMAIN_5G_FCC = 0x20,
+	RT_CHANNEL_DOMAIN_5G_JAPAN_NO_DFS = 0x21,
+	RT_CHANNEL_DOMAIN_5G_FCC4_NO_DFS = 0x22,
 	RT_CHANNEL_DOMAIN_5G_MAX,
 }RT_CHANNEL_DOMAIN_5G, *PRT_CHANNEL_DOMAIN_5G;
 
@@ -412,11 +422,15 @@ struct FW_Sta_Info
  * 4. Back to channel 1 for 300 milliseconds
  * 5. ... and so on, till survey done.
  */
-#if defined CONFIG_STA_MODE_SCAN_UNDER_AP_MODE && defined CONFIG_CONCURRENT_MODE
+#if defined(CONFIG_ATMEL_RC_PATCH)
+#define RTW_SCAN_NUM_OF_CH			2
+#define RTW_STAY_AP_CH_MILLISECOND		2	// this value is a multiplier,for example, when this value is 3,
+							// it would stay AP's op ch for  3 * SURVEY_TO millisecond.
+#elif defined(CONFIG_STA_MODE_SCAN_UNDER_AP_MODE)
 #define RTW_SCAN_NUM_OF_CH			8
-#define RTW_STAY_AP_CH_MILLISECOND	3	// this value is a multiplier,for example, when this value is 3, it would stay AP's op ch for
-											// 3 * SURVEY_TO millisecond.
-#endif //defined CONFIG_STA_MODE_SCAN_UNDER_AP_MODE && defined CONFIG_CONCURRENT_MODE
+#define RTW_STAY_AP_CH_MILLISECOND		3	// this value is a multiplier,for example, when this value is 3,
+							// it would stay AP's op ch for  3 * SURVEY_TO millisecond.
+#endif
 
 struct mlme_ext_info
 {
@@ -464,7 +478,7 @@ struct mlme_ext_info
 	WLAN_BSSID_EX			network;//join network or bss_network, if in ap mode, it is the same to cur_network.network
 	struct FW_Sta_Info		FW_sta_info[NUM_STA];
 
-#ifdef CONFIG_STA_MODE_SCAN_UNDER_AP_MODE
+#if defined(CONFIG_STA_MODE_SCAN_UNDER_AP_MODE) || defined(CONFIG_ATMEL_RC_PATCH)
 	u8 scan_cnt;
 #endif //CONFIG_STA_MODE_SCAN_UNDER_AP_MODE
 };
@@ -598,8 +612,8 @@ struct xmit_frame *alloc_mgtxmitframe_once(struct xmit_priv *pxmitpriv);
 
 //void fill_fwpriv(_adapter * padapter, struct fw_priv *pfwpriv);
 
-unsigned char networktype_to_raid(_adapter *adapter,unsigned char network_type);
-unsigned char networktype_to_raid_ex(_adapter *adapter,unsigned char network_type);
+unsigned char networktype_to_raid(_adapter *adapter,struct sta_info *psta);
+unsigned char networktype_to_raid_ex(_adapter *adapter, struct sta_info *psta);
 
 u8 judge_network_type(_adapter *padapter, unsigned char *rate, int ratelen);
 void get_rate_set(_adapter *padapter, unsigned char *pbssrate, int *bssrate_len);
@@ -683,7 +697,7 @@ void update_IOT_info(_adapter *padapter);
 void update_capinfo(PADAPTER Adapter, u16 updateCap);
 void update_wireless_mode(_adapter * padapter);
 void update_tx_basic_rate(_adapter *padapter, u8 modulation);
-void update_bmc_sta_support_rate(_adapter *padapter, u32 mac_id);
+void update_sta_basic_rate(struct sta_info *psta, u8 wireless_mode);
 int update_sta_support_rate(_adapter *padapter, u8* pvar_ie, uint var_ie_len, int cam_idx);
 
 //for sta/adhoc mode

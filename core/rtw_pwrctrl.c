@@ -608,6 +608,8 @@ _func_enter_;
 #endif // !CONFIG_RTL8723A
 				pwrpriv->cpwm_tog = cpwm_now & PS_TOGGLE;
 #ifdef DBG_CHECK_FW_PS_STATE
+				DBG_871X("%s: polling cpwm OK! poll_cnt=%d, cpwm_orig=%02x, cpwm_now=%02x , 0x100=0x%x\n"
+				, __FUNCTION__,poll_cnt, cpwm_orig, cpwm_now, rtw_read8(padapter, REG_CR));
 				if(rtw_fw_ps_state(padapter) == _FAIL)
 				{
 					DBG_871X("leave 32k but fw state in 32k\n");
@@ -619,7 +621,7 @@ _func_enter_;
 
 			if (rtw_get_passing_time_ms(start_time) > LPS_RPWM_WAIT_MS)
 			{
-				DBG_871X("%s: polling cpwm timeout!!!!!!!!!!poll_cnt=%d\n", __FUNCTION__,poll_cnt);
+				DBG_871X("%s: polling cpwm timeout! poll_cnt=%d, cpwm_orig=%02x, cpwm_now=%02x \n", __FUNCTION__,poll_cnt, cpwm_orig, cpwm_now);
 #ifdef DBG_CHECK_FW_PS_STATE
 				if(rtw_fw_ps_state(padapter) == _FAIL)
 				{
@@ -756,7 +758,7 @@ _func_enter_;
 #endif // !CONFIG_BT_COEXIST
 			)
 		{
-			DBG_871X(FUNC_ADPT_FMT":%s: Leave 802.11 power save\n",
+			DBG_871X(FUNC_ADPT_FMT" Leave 802.11 power save - %s\n",
 				FUNC_ADPT_ARG(padapter), msg);
 
 #ifdef CONFIG_TDLS
@@ -826,7 +828,7 @@ _func_enter_;
 		{
 			u8 pslv;
 
-			DBG_871X(FUNC_ADPT_FMT":%s: Enter 802.11 power save\n",
+			DBG_871X(FUNC_ADPT_FMT" Enter 802.11 power save - %s\n",
 				FUNC_ADPT_ARG(padapter), msg);
 
 #ifdef CONFIG_TDLS
@@ -1115,11 +1117,13 @@ _func_enter_;
 #ifdef CONFIG_LPS_LCLK
 		_enter_pwrlock(&pwrpriv->lock);
 
-		rtw_set_rpwm(Adapter, PS_STATE_S4);
-
 #ifndef CONFIG_DETECT_CPWM_BY_POLLING
 		cpwm_orig = 0;
 		rtw_hal_get_hwreg(Adapter, HW_VAR_CPWM, &cpwm_orig);
+#endif //CONFIG_DETECT_CPWM_BY_POLLING
+		rtw_set_rpwm(Adapter, PS_STATE_S4);
+
+#ifndef CONFIG_DETECT_CPWM_BY_POLLING
 
 		start_time = rtw_get_current_time();
 
@@ -1137,6 +1141,8 @@ _func_enter_;
 #endif // !CONFIG_RTL8723A
 				pwrpriv->cpwm_tog = cpwm_now & PS_TOGGLE;
 #ifdef DBG_CHECK_FW_PS_STATE
+				DBG_871X("%s: polling cpwm OK! cpwm_orig=%02x, cpwm_now=%02x, 0x100=0x%x \n"
+				, __FUNCTION__, cpwm_orig, cpwm_now, rtw_read8(padapter, REG_CR));
 				if(rtw_fw_ps_state(Adapter) == _FAIL)
 				{
 					DBG_871X("%s: leave 32k but fw state in 32k\n", __FUNCTION__);
@@ -1148,7 +1154,7 @@ _func_enter_;
 
 			if (rtw_get_passing_time_ms(start_time) > LPS_RPWM_WAIT_MS)
 			{
-				DBG_871X("%s: polling cpwm timeout!!!!!!!!!!\n", __FUNCTION__);
+				DBG_871X("%s: polling cpwm timeout! cpwm_orig=%02x, cpwm_now=%02x \n", __FUNCTION__, cpwm_orig, cpwm_now);
 #ifdef DBG_CHECK_FW_PS_STATE
 				if(rtw_fw_ps_state(Adapter) == _FAIL)
 				{
@@ -2107,6 +2113,7 @@ _func_enter_;
 	pwrctrlpriv->pwr_mode = PS_MODE_ACTIVE;
 	pwrctrlpriv->smart_ps = padapter->registrypriv.smart_ps;
 	pwrctrlpriv->bcn_ant_mode = 0;
+	pwrctrlpriv->dtim = 1;
 
 	pwrctrlpriv->tog = 0x80;
 
@@ -2134,6 +2141,11 @@ _func_enter_;
 	rtw_register_early_suspend(pwrctrlpriv);
 	#endif //CONFIG_HAS_EARLYSUSPEND || CONFIG_ANDROID_POWER
 
+#ifdef CONFIG_PNO_SUPPORT
+	pwrctrlpriv->pnlo_info = NULL;
+	pwrctrlpriv->pscan_info = NULL;
+	pwrctrlpriv->pno_ssid_list = NULL;
+#endif
 
 _func_exit_;
 
@@ -2161,6 +2173,16 @@ _func_enter_;
 	}
 	#endif
 
+#ifdef CONFIG_PNO_SUPPORT
+	if (pwrctrlpriv->pnlo_info != NULL)
+		printk("****** pnlo_info memory leak********\n");
+
+	if (pwrctrlpriv->pscan_info != NULL)
+		printk("****** pscan_info memory leak********\n");
+
+	if (pwrctrlpriv->pno_ssid_list != NULL)
+		printk("****** pno_ssid_list memory leak********\n");
+#endif
 
 	#if defined(CONFIG_HAS_EARLYSUSPEND) || defined(CONFIG_ANDROID_POWER)
 	rtw_unregister_early_suspend(pwrctrlpriv);

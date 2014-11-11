@@ -654,8 +654,34 @@ void Hal_SetTxAGCOffset(PADAPTER pAdapter, u32 ulTxAGCOffset)
 
 void Hal_SetDataRate(PADAPTER pAdapter)
 {
+	HAL_DATA_TYPE	*pHalData = GET_HAL_DATA(pAdapter);
+	PMPT_CONTEXT		pMptCtx = &(pAdapter->mppriv.MptCtx);
+	u32 DataRate;
+
+	DataRate=MptToMgntRate(pAdapter->mppriv.rateidx);
+
 		if(!IS_HARDWARE_TYPE_8723A(pAdapter))
 	        Hal_mpt_SwitchRfSetting(pAdapter);
+
+	if ((pHalData->PackageType == PACKAGE_DEFAULT) || (pHalData->PackageType == PACKAGE_QFN68))
+	{
+		if (IS_CCK_RATE(DataRate))
+		{
+			if ( pMptCtx->MptRfPath == ODM_RF_PATH_A) // S1
+			{
+				PHY_SetRFReg(pAdapter, ODM_RF_PATH_A, 0x51, 0xF, 0x6);
+			}
+			else // S0
+			{
+				PHY_SetRFReg(pAdapter, ODM_RF_PATH_A, 0x71, 0xF, 0x6);
+			}
+		}
+		else
+		{
+			PHY_SetRFReg(pAdapter, ODM_RF_PATH_A, 0x51, 0xF, 0xE);
+			PHY_SetRFReg(pAdapter, ODM_RF_PATH_A, 0x71, 0xF, 0xE);
+		}
+	}
 }
 
 #define RF_PATH_AB	22
@@ -684,66 +710,72 @@ void Hal_SetAntenna(PADAPTER pAdapter)
 	    case ANTENNA_A: // Actually path S1  (Wi-Fi)
 			{
 				pMptCtx->MptRfPath = ODM_RF_PATH_A;
-	            PHY_SetBBReg(pAdapter, rS0S1_PathSwitch, BIT9|BIT8|BIT7, 0x0);
-	            PHY_SetRFReg(pAdapter, ODM_RF_PATH_A, RF_S0S1, BIT17|BIT16, 0x1);
+				PHY_SetBBReg(pAdapter, rS0S1_PathSwitch, BIT9|BIT8|BIT7, 0x0);
+				PHY_SetBBReg(pAdapter, 0xB2C, BIT31, 0x0); // AGC Table Sel
 
 				//<20130522, Kordan> 0x51 and 0x71 should be set immediately after path switched, or they might be overwritten.
-				// TODO: 8723BS TFBGA uses 0x6B04E. (Asked by Kevinyang)
-				PHY_SetRFReg(pAdapter, ODM_RF_PATH_A, 0x51, bRFRegOffsetMask, 0x6B04E);
+				if ((pHalData->PackageType == PACKAGE_TFBGA79) || (pHalData->PackageType == PACKAGE_TFBGA90))
+					PHY_SetRFReg(pAdapter, ODM_RF_PATH_A, 0x51, bRFRegOffsetMask, 0x6B10E);
+				else
+					PHY_SetRFReg(pAdapter, ODM_RF_PATH_A, 0x51, bRFRegOffsetMask, 0x6B04E);
 
-	            for (i = 0; i < 3; ++i)
-			{
+
+				for (i = 0; i < 3; ++i)
+				{
 					u4Byte offset = pRFCalibrateInfo->TxIQC_8723B[ODM_RF_PATH_A][i][0];
-	                u4Byte data = pRFCalibrateInfo->TxIQC_8723B[ODM_RF_PATH_A][i][1];
+					 u4Byte data = pRFCalibrateInfo->TxIQC_8723B[ODM_RF_PATH_A][i][1];
 					if (offset != 0) {
 						PHY_SetBBReg(pAdapter, offset, bMaskDWord, data);
 						DBG_8192C("Switch to S1 TxIQC(offset, data) = (0x%X, 0x%X)\n", offset, data);
 					}
 
-	            }
-	            for (i = 0; i < 2; ++i)
-			{
-	                u4Byte offset = pRFCalibrateInfo->RxIQC_8723B[ODM_RF_PATH_A][i][0];
-	                u4Byte data = pRFCalibrateInfo->RxIQC_8723B[ODM_RF_PATH_A][i][1];
+				}
+				 for (i = 0; i < 2; ++i)
+				{
+					u4Byte offset = pRFCalibrateInfo->RxIQC_8723B[ODM_RF_PATH_A][i][0];
+					u4Byte data = pRFCalibrateInfo->RxIQC_8723B[ODM_RF_PATH_A][i][1];
 					if (offset != 0) {
 						PHY_SetBBReg(pAdapter, offset, bMaskDWord, data);
 						DBG_8192C("Switch to S1 RxIQC (offset, data) = (0x%X, 0x%X)\n", offset, data);
 					}
-			}
+				}
 			}
 		break;
-        case ANTENNA_B: // Actually path S0 (BT)
+		case ANTENNA_B: // Actually path S0 (BT)
 			{
 				pMptCtx->MptRfPath = ODM_RF_PATH_B;
-	            PHY_SetBBReg(pAdapter, rS0S1_PathSwitch, BIT9|BIT8|BIT7, 0x5);
-	            PHY_SetRFReg(pAdapter, ODM_RF_PATH_A, RF_S0S1, BIT17|BIT16, 0x2);
+				PHY_SetBBReg(pAdapter, rS0S1_PathSwitch, BIT9|BIT8|BIT7, 0x5);
+				PHY_SetBBReg(pAdapter, 0xB2C, BIT31, 0x1); // AGC Table Sel
 
 				//<20130522, Kordan> 0x51 and 0x71 should be set immediately after path switched, or they might be overwritten.
-				// TODO: 8723BS TFBGA uses 0x6B04E. (Asked by Kevinyang)
-				PHY_SetRFReg(pAdapter, ODM_RF_PATH_A, 0x71, bRFRegOffsetMask, 0x6B04E);
+				if ((pHalData->PackageType == PACKAGE_TFBGA79) || (pHalData->PackageType == PACKAGE_TFBGA90))
+						PHY_SetRFReg(pAdapter, ODM_RF_PATH_A, 0x51, bRFRegOffsetMask, 0x6B10E);
+				else
+						PHY_SetRFReg(pAdapter, ODM_RF_PATH_A, 0x51, bRFRegOffsetMask, 0x6B04E);
+
 
 				for (i = 0; i < 3; ++i)
-			{
+				{
 					 // <20130603, Kordan> Because BB suppors only 1T1R, we restore IQC  to S1 instead of S0.
 					 u4Byte offset = pRFCalibrateInfo->TxIQC_8723B[ODM_RF_PATH_A][i][0];
 					 u4Byte data = pRFCalibrateInfo->TxIQC_8723B[ODM_RF_PATH_B][i][1];
 					if (pRFCalibrateInfo->TxIQC_8723B[ODM_RF_PATH_B][i][0] != 0) {
 					 PHY_SetBBReg(pAdapter, offset, bMaskDWord, data);
 					 DBG_8192C("Switch to S0 TxIQC (offset, data) = (0x%X, 0x%X)\n", offset, data);
-			}
+					}
 				}
 				for (i = 0; i < 2; ++i)
-			{
+				{
 					 // <20130603, Kordan> Because BB suppors only 1T1R, we restore IQC to S1 instead of S0.
 					 u4Byte offset = pRFCalibrateInfo->RxIQC_8723B[ODM_RF_PATH_A][i][0];
 					 u4Byte data = pRFCalibrateInfo->RxIQC_8723B[ODM_RF_PATH_B][i][1];
 					if (pRFCalibrateInfo->RxIQC_8723B[ODM_RF_PATH_B][i][0] != 0) {
-					 PHY_SetBBReg(pAdapter, offset, bMaskDWord, data);
-					 DBG_8192C("Switch to S0 RxIQC (offset, data) = (0x%X, 0x%X)\n", offset, data);
-			}
+						PHY_SetBBReg(pAdapter, offset, bMaskDWord, data);
+						DBG_8192C("Switch to S0 RxIQC (offset, data) = (0x%X, 0x%X)\n", offset, data);
+					}
 				}
 
-	}
+			}
 			break;
 		default:
 			pMptCtx->MptRfPath = RF_PATH_AB;
@@ -782,24 +814,16 @@ s32 Hal_SetThermalMeter(PADAPTER pAdapter, u8 target_ther)
 
 void Hal_TriggerRFThermalMeter(PADAPTER pAdapter)
 {
-	PHY_SetRFReg(pAdapter, ODM_RF_PATH_A, 0x42, BIT17, 0x01);
-	//write_rfreg(pAdapter, RF_PATH_A, RF_T_METER, 0x60);	// 0x24: RF Reg[6:5]
-
+	PHY_SetRFReg(pAdapter, ODM_RF_PATH_A, 0x42, BIT17 | BIT16, 0x03);
 //	RT_TRACE(_module_mp_,_drv_alert_, ("TriggerRFThermalMeter() finished.\n" ));
 }
 
 u8 Hal_ReadRFThermalMeter(PADAPTER pAdapter)
 {
 	u32 ThermalValue = 0;
-	//if(IS_HARDWARE_TYPE_8192D(pAdapter))
-	//	ThermalValue = PHY_QueryRFReg(pAdapter, ODM_RF_PATH_A, RF_T_METER_92D, 0xf800);	//0x42: RF Reg[15:11] 92D
-	//else if(IS_HARDWARE_TYPE_8188E(pAdapter) || IS_HARDWARE_TYPE_JAGUAR(pAdapter) || IS_HARDWARE_TYPE_8192E(pAdapter) ||
-	//				IS_HARDWARE_TYPE_8723B(pAdapter))
-		ThermalValue = (u1Byte)PHY_QueryRFReg(pAdapter, ODM_RF_PATH_A, 0x42, 0xfc00);	// 0x42: RF Reg[15:10]
-//	else
-//		ThermalValue = PHY_QueryRFReg(pAdapter, ODM_RF_PATH_A, RF_T_METER, 0x1f);	// 0x24: RF Reg[4:0]
-	//ThermalValue = _read_rfreg(pAdapter, RF_PATH_A, RF_T_METER, 0x1F);	// 0x24: RF Reg[4:0]
-//	RT_TRACE(_module_mp_, _drv_alert_, ("ThermalValue = 0x%x\n", ThermalValue));
+
+	ThermalValue = (u1Byte)PHY_QueryRFReg(pAdapter, ODM_RF_PATH_A, 0x42, 0xfc00);	// 0x42: RF Reg[15:10]
+
 	return (u8)ThermalValue;
 }
 

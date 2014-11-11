@@ -285,10 +285,18 @@ _func_enter_;
 		pxmitbuf->padapter = padapter;
 		pxmitbuf->buf_tag = XMITBUF_CMD;
 
-		if((res=rtw_os_xmit_resource_alloc(padapter, pxmitbuf, 0, _TRUE)) == _FAIL) {
+		if((res=rtw_os_xmit_resource_alloc(padapter, pxmitbuf, MAX_CMDBUF_SZ+XMITBUF_ALIGN_SZ, _TRUE)) == _FAIL) {
 			res= _FAIL;
 			goto exit;
 		}
+
+#if defined(CONFIG_SDIO_HCI) || defined(CONFIG_GSPI_HCI)
+		pxmitbuf->phead = pxmitbuf->pbuf;
+		pxmitbuf->pend = pxmitbuf->pbuf + MAX_CMDBUF_SZ;
+		pxmitbuf->len = 0;
+		pxmitbuf->pdata = pxmitbuf->ptail = pxmitbuf->phead;
+#endif
+		pxmitbuf->alloc_sz = MAX_CMDBUF_SZ+XMITBUF_ALIGN_SZ;
 	}
 
 	rtw_alloc_hwxmits(padapter);
@@ -424,7 +432,7 @@ void _rtw_free_xmit_priv (struct xmit_priv *pxmitpriv)
 
 	pxmitbuf = &pxmitpriv->pcmd_xmitbuf;
 	if(pxmitbuf!=NULL)
-		rtw_os_xmit_resource_free(padapter, pxmitbuf, 0, _TRUE);
+		rtw_os_xmit_resource_free(padapter, pxmitbuf, MAX_CMDBUF_SZ+XMITBUF_ALIGN_SZ , _TRUE);
 
 	rtw_free_hwxmits(padapter);
 
@@ -1432,7 +1440,7 @@ _func_enter_;
 				if(pattrib->ht_en && psta->htpriv.ampdu_enable)
 				{
 					if(psta->htpriv.agg_enable_bitmap & BIT(pattrib->priority))
-					pattrib->ampdu_en = _TRUE;
+						pattrib->ampdu_en = _TRUE;
 				}
 
 				//re-check if enable ampdu by BA_starting_seqctrl
@@ -2406,25 +2414,26 @@ void rtw_count_tx_stats(PADAPTER padapter, struct xmit_frame *pxmitframe, int sz
 	struct stainfo_stats *pstats = NULL;
 	struct xmit_priv	*pxmitpriv = &padapter->xmitpriv;
 	struct mlme_priv	*pmlmepriv = &padapter->mlmepriv;
+	u8	pkt_num = 1;
 
 	if ((pxmitframe->frame_tag&0x0f) == DATA_FRAMETAG)
 	{
-		pxmitpriv->tx_bytes += sz;
 #if defined(CONFIG_USB_TX_AGGREGATION) || defined(CONFIG_SDIO_HCI) || defined(CONFIG_GSPI_HCI)
-		pmlmepriv->LinkDetectInfo.NumTxOkInPeriod += pxmitframe->agg_num;
-#else
-		pmlmepriv->LinkDetectInfo.NumTxOkInPeriod++;
+		pkt_num = pxmitframe->agg_num;
 #endif
+		pmlmepriv->LinkDetectInfo.NumTxOkInPeriod += pkt_num;
+
+		pxmitpriv->tx_pkts += pkt_num;
+
+		pxmitpriv->tx_bytes += sz;
 
 		psta = pxmitframe->attrib.psta;
 		if (psta)
 		{
 			pstats = &psta->sta_stats;
-#if defined(CONFIG_USB_TX_AGGREGATION) || defined(CONFIG_SDIO_HCI) || defined(CONFIG_GSPI_HCI)
-			pstats->tx_pkts += pxmitframe->agg_num;
-#else
-			pstats->tx_pkts++;
-#endif
+
+			pstats->tx_pkts += pkt_num;
+
 			pstats->tx_bytes += sz;
 		}
 
@@ -2435,33 +2444,21 @@ void rtw_count_tx_stats(PADAPTER padapter, struct xmit_frame *pxmitframe, int sz
 	}
 }
 
-struct xmit_buf *rtw_alloc_cmd_xmitbuf(struct xmit_priv *pxmitpriv, u32 buffsize)
+struct xmit_buf *rtw_alloc_cmd_xmitbuf(struct xmit_priv *pxmitpriv)
 {
 	struct xmit_buf *pxmitbuf =  NULL;
 
 _func_enter_;
 
-	if (rtw_free_cmd_xmitbuf(pxmitpriv) == _FAIL) {
-		DBG_871X("%s rtw_free_cmd_xmitbuf FAIL !\n", __func__);
-		goto exit;
-	}
-
 	pxmitbuf = &pxmitpriv->pcmd_xmitbuf;
 	if (pxmitbuf !=  NULL) {
-		if(rtw_os_xmit_resource_alloc(pxmitpriv->adapter, pxmitbuf,(buffsize + XMITBUF_ALIGN_SZ), _FALSE) == _FAIL) {
-			pxmitbuf =  NULL;
-			goto exit;
-		}
-
-		pxmitbuf->alloc_sz = buffsize + XMITBUF_ALIGN_SZ;
-
 		pxmitbuf->priv_data = NULL;
 
 #if defined(CONFIG_SDIO_HCI) || defined(CONFIG_GSPI_HCI)
-		pxmitbuf->phead = pxmitbuf->pbuf;
-		pxmitbuf->pend = pxmitbuf->pbuf + buffsize;
 		pxmitbuf->len = 0;
 		pxmitbuf->pdata = pxmitbuf->ptail = pxmitbuf->phead;
+		pxmitbuf->agg_num = 0;
+		pxmitbuf->pg_num = 0;
 #endif
 #ifdef CONFIG_PCI_HCI
 		pxmitbuf->len = 0;
@@ -2502,7 +2499,7 @@ _func_exit_;
 	return _SUCCESS;
 }
 
-struct xmit_frame *rtw_alloc_cmdxmitframe(struct xmit_priv *pxmitpriv, u32 buffsize)
+struct xmit_frame *rtw_alloc_cmdxmitframe(struct xmit_priv *pxmitpriv)
 {
 	struct xmit_frame		*pcmdframe;
 	struct xmit_buf		*pxmitbuf;
@@ -2513,7 +2510,7 @@ struct xmit_frame *rtw_alloc_cmdxmitframe(struct xmit_priv *pxmitpriv, u32 buffs
 		return NULL;
 	}
 
-	if ((pxmitbuf = rtw_alloc_cmd_xmitbuf(pxmitpriv, buffsize)) == NULL) {
+	if ((pxmitbuf = rtw_alloc_cmd_xmitbuf(pxmitpriv)) == NULL) {
 		DBG_871X("%s, alloc xmitbuf fail\n", __FUNCTION__);
 		rtw_free_xmitframe(pxmitpriv, pcmdframe);
 		return NULL;
@@ -2529,12 +2526,6 @@ struct xmit_frame *rtw_alloc_cmdxmitframe(struct xmit_priv *pxmitpriv, u32 buffs
 
 	return pcmdframe;
 
-}
-
-void	rtw_free_cmdxmitframe(struct xmit_priv *pxmitpriv, struct xmit_frame *pxmitframe)
-{
-	rtw_free_xmitframe(pxmitpriv, pxmitframe);
-	rtw_free_cmd_xmitbuf(pxmitpriv);
 }
 
 struct xmit_buf *rtw_alloc_xmitbuf_ext(struct xmit_priv *pxmitpriv)
@@ -2707,7 +2698,6 @@ _func_enter_;
 	}
 
 	if(pxmitbuf->buf_tag == XMITBUF_CMD) {
-		rtw_free_cmd_xmitbuf(pxmitpriv);
 	}
 	else if(pxmitbuf->buf_tag == XMITBUF_MGNT) {
 		rtw_free_xmitbuf_ext(pxmitpriv, pxmitbuf);
@@ -3887,7 +3877,7 @@ sint xmitframe_enqueue_for_sleeping_sta(_adapter *padapter, struct xmit_frame *p
 
 			//DBG_871X("enqueue, sq_len=%d, tim=%x\n", psta->sleepq_len, pstapriv->tim_bitmap);
 
-			update_beacon(padapter, _TIM_IE_, NULL, _FALSE);//tx bc/mc packets after upate bcn
+			update_beacon(padapter, _TIM_IE_, NULL, _TRUE);//tx bc/mc packets after upate bcn
 
 			//_exit_critical_bh(&psta->sleep_q.lock, &irqL);
 
@@ -3952,7 +3942,7 @@ sint xmitframe_enqueue_for_sleeping_sta(_adapter *padapter, struct xmit_frame *p
 				{
 					//DBG_871X("sleepq_len==1, update BCNTIM\n");
 					//upate BCN for TIM IE
-					update_beacon(padapter, _TIM_IE_, NULL, _FALSE);
+					update_beacon(padapter, _TIM_IE_, NULL, _TRUE);
 				}
 			}
 
@@ -4252,7 +4242,7 @@ _exit:
 	{
 		//update_BCNTIM(padapter);
 		//printk("%s => call update_beacon\n",__FUNCTION__);
-		update_beacon(padapter, _TIM_IE_, NULL, _FALSE);
+		update_beacon(padapter, _TIM_IE_, NULL, _TRUE);
 	}
 
 }
@@ -4344,7 +4334,7 @@ void xmit_delivery_enabled_frames(_adapter *padapter, struct sta_info *psta)
 			//DBG_871X("wakeup to xmit, qlen==0, update_BCNTIM, tim=%x\n", pstapriv->tim_bitmap);
 			//upate BCN for TIM IE
 			//update_BCNTIM(padapter);
-			update_beacon(padapter, _TIM_IE_, NULL, _FALSE);
+			update_beacon(padapter, _TIM_IE_, NULL, _TRUE);
 			//update_mask = BIT(0);
 		}
 

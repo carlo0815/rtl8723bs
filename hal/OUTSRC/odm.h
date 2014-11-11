@@ -301,6 +301,7 @@ typedef struct _RX_High_Power_
 #define	RSSI_MODE		1
 #define	TRAFFIC_LOW	0
 #define	TRAFFIC_HIGH	1
+#define	TRAFFIC_UltraLOW	2
 
 typedef struct _SW_Antenna_Switch_
 {
@@ -314,6 +315,7 @@ typedef struct _SW_Antenna_Switch_
 	u1Byte		bTriggerAntennaSwitch;
 	u1Byte		SelectAntennaMap;
 	u1Byte		RSSI_target;
+	u1Byte 		reset_idx;
 
 	// Before link Antenna Switch check
 	u1Byte		SWAS_NoLink_State;
@@ -643,10 +645,15 @@ typedef enum _ODM_Common_Info_Definition
 	ODM_CMNINFO_RF_TYPE,					// ODM_RF_PATH_E or ODM_RF_TYPE_E?
 	ODM_CMNINFO_RFE_TYPE,
 	ODM_CMNINFO_BOARD_TYPE,				// ODM_BOARD_TYPE_E
+	ODM_CMNINFO_PACKAGE_TYPE,
 	ODM_CMNINFO_EXT_LNA,					// TRUE
 	ODM_CMNINFO_5G_EXT_LNA,
 	ODM_CMNINFO_EXT_PA,
 	ODM_CMNINFO_5G_EXT_PA,
+	ODM_CMNINFO_GPA,
+	ODM_CMNINFO_APA,
+	ODM_CMNINFO_GLNA,
+	ODM_CMNINFO_ALNA,
 	ODM_CMNINFO_EXT_TRSW,
 	ODM_CMNINFO_PATCH_ID,				//CUSTOMER ID
 	ODM_CMNINFO_BINHCT_TEST,
@@ -798,14 +805,15 @@ typedef enum tag_ODM_Support_IC_Type_Definition
 //ODM_CMNINFO_CUT_VER
 typedef enum tag_ODM_Cut_Version_Definition
 {
-	ODM_CUT_A 		=	1,
-	ODM_CUT_B 		=	2,
-	ODM_CUT_C 		=	3,
-	ODM_CUT_D 		=	4,
-	ODM_CUT_E 		=	5,
-	ODM_CUT_F 		=	6,
-	ODM_CUT_I 		=	9,
-	ODM_CUT_TEST 	=	7,
+	ODM_CUT_A 		=	0,
+	ODM_CUT_B 		=	1,
+	ODM_CUT_C 		=	2,
+	ODM_CUT_D 		=	3,
+	ODM_CUT_E 		=	4,
+	ODM_CUT_F 		=	5,
+
+	ODM_CUT_I 		=	8,
+	ODM_CUT_TEST 	=	15,
 }ODM_CUT_VERSION_E;
 
 // ODM_CMNINFO_FAB_VER
@@ -886,17 +894,34 @@ typedef enum tag_Operation_Mode_Definition
 }ODM_OPERATION_MODE_E;
 
 // ODM_CMNINFO_WM_MODE
+#if (DM_ODM_SUPPORT_TYPE & (ODM_AP|ODM_CE))
 typedef enum tag_Wireless_Mode_Definition
 {
-	ODM_WM_UNKNOW	= 0x0,
-	ODM_WM_B			= BIT0,
-	ODM_WM_G			= BIT1,
-	ODM_WM_A			= BIT2,
-	ODM_WM_N24G		= BIT3,
-	ODM_WM_N5G		= BIT4,
-	ODM_WM_AUTO		= BIT5,
-	ODM_WM_AC		= BIT6,
+        ODM_WM_UNKNOW     = 0x0,
+        ODM_WM_B                  = BIT0,
+        ODM_WM_G                  = BIT1,
+        ODM_WM_A                  = BIT2,
+        ODM_WM_N24G           = BIT3,
+        ODM_WM_N5G             = BIT4,
+        ODM_WM_AUTO           = BIT5,
+        ODM_WM_AC                = BIT6,
 }ODM_WIRELESS_MODE_E;
+#else
+typedef enum tag_Wireless_Mode_Definition
+{
+        ODM_WM_UNKNOWN 	= 0x00,
+        ODM_WM_A 			= BIT0,
+        ODM_WM_B 			= BIT1,
+        ODM_WM_G 			= BIT2,
+        ODM_WM_AUTO 		= BIT3,
+        ODM_WM_N24G 		= BIT4,
+        ODM_WM_N5G 		= BIT5,
+        ODM_WM_AC_5G 	= BIT6,
+        ODM_WM_AC_24G  	= BIT7,
+        ODM_WM_AC_ONLY  	= BIT8,
+        ODM_WM_MAX  		= BIT9
+}ODM_WIRELESS_MODE_E;
+#endif
 
 // ODM_CMNINFO_BAND
 typedef enum tag_Band_Type_Definition
@@ -956,6 +981,41 @@ typedef enum tag_Board_Definition
     ODM_BOARD_EXT_LNA_5G= BIT(7), // 0 = no 5G ext-LNA, 1 = existing 5G ext-LNA
 }ODM_BOARD_TYPE_E;
 
+typedef enum tag_ODM_Package_Definition
+{
+    ODM_PACKAGE_DEFAULT  	 = 0,
+    ODM_PACKAGE_QFN68        = BIT(0),
+    ODM_PACKAGE_TFBGA90      = BIT(1),
+    ODM_PACKAGE_TFBGA79      = BIT(2),
+}ODM_Package_TYPE_E;
+
+typedef enum tag_ODM_TYPE_GPA_Definition
+{
+    TYPE_GPA0 = 0,
+    TYPE_GPA1 = BIT(1)|BIT(0)
+}ODM_TYPE_GPA_E;
+
+typedef enum tag_ODM_TYPE_APA_Definition
+{
+    TYPE_APA0 = 0,
+    TYPE_APA1 = BIT(1)|BIT(0)
+}ODM_TYPE_APA_E;
+
+typedef enum tag_ODM_TYPE_GLNA_Definition
+{
+    TYPE_GLNA0 = 0,
+    TYPE_GLNA1 = BIT(2)|BIT(0),
+    TYPE_GLNA2 = BIT(3)|BIT(1),
+    TYPE_GLNA3 = BIT(3)|BIT(2)|BIT(1)|BIT(0)
+}ODM_TYPE_GLNA_E;
+
+typedef enum tag_ODM_TYPE_ALNA_Definition
+{
+    TYPE_ALNA0 = 0,
+    TYPE_ALNA1 = BIT(2)|BIT(0),
+    TYPE_ALNA2 = BIT(3)|BIT(1),
+    TYPE_ALNA3 = BIT(3)|BIT(2)|BIT(1)|BIT(0)
+}ODM_TYPE_ALNA_E;
 
 // ODM_CMNINFO_ONE_PATH_CCA
 typedef enum tag_CCA_Path
@@ -1294,6 +1354,11 @@ typedef  struct DM_Out_Source_Dynamic_Mechanism_Structure
 	u1Byte			RFEType;
 	// Board Type Normal/HighPower/MiniCard/SLIM/Combo/... = 0/1/2/3/4/...
 	u1Byte			BoardType;
+	u1Byte			PackageType;
+	u1Byte			TypeGLNA;
+	u1Byte			TypeGPA;
+	u1Byte			TypeALNA;
+	u1Byte			TypeAPA;
 	// with external LNA  NO/Yes = 0/1
 	u1Byte			ExtLNA;
 	u1Byte			ExtLNA5G;
@@ -1361,6 +1426,7 @@ typedef  struct DM_Out_Source_Dynamic_Mechanism_Structure
 	BOOLEAN			bWIFI_Direct;
 	BOOLEAN			bWIFI_Display;
 	BOOLEAN			bLinked;
+
 	BOOLEAN			bsta_state;
 	u1Byte			RSSI_Min;
 	u1Byte          InterfaceIndex; // Add for 92D  dual MAC: 0--Mac0 1--Mac1
@@ -1383,6 +1449,7 @@ typedef  struct DM_Out_Source_Dynamic_Mechanism_Structure
 
 	u1Byte			RxRate;
 	BOOLEAN			StopDIG;
+	BOOLEAN			bNoisyState;
 	u1Byte			TxRate;
 	u1Byte			LinkedInterval;
 	u1Byte			preChannel;
@@ -1520,7 +1587,7 @@ typedef  struct DM_Out_Source_Dynamic_Mechanism_Structure
 	u1Byte			DefaultCckIndex;
 	BOOLEAN			BbSwingFlagCck;
 
-	s1Byte			Aboslute_OFDMSwingIdx[MAX_RF_PATH];
+	s1Byte			Absolute_OFDMSwingIdx[MAX_RF_PATH];
 	s1Byte			Remnant_OFDMSwingIdx[MAX_RF_PATH];
 	s1Byte			Remnant_CCKSwingIdx;
 	s1Byte			Modify_TxAGC_Value;       //Remnat compensate value at TxAGC
@@ -1587,6 +1654,16 @@ typedef enum _ODM_RF_RADIO_PATH {
     ODM_RF_PATH_B = 1,   //Radio Path B
     ODM_RF_PATH_C = 2,   //Radio Path C
     ODM_RF_PATH_D = 3,   //Radio Path D
+    ODM_RF_PATH_AB,
+    ODM_RF_PATH_AC,
+    ODM_RF_PATH_AD,
+    ODM_RF_PATH_BC,
+    ODM_RF_PATH_BD,
+    ODM_RF_PATH_CD,
+    ODM_RF_PATH_ABC,
+    ODM_RF_PATH_ACD,
+    ODM_RF_PATH_BCD,
+    ODM_RF_PATH_ABCD,
   //  ODM_RF_PATH_MAX,    //Max RF number 90 support
 } ODM_RF_RADIO_PATH_E, *PODM_RF_RADIO_PATH_E;
 
@@ -2252,12 +2329,33 @@ ODM_DynamicATCSwitch(
 
 
 #endif	// #if((DM_ODM_SUPPORT_TYPE==ODM_WIN)||(DM_ODM_SUPPORT_TYPE==ODM_CE))
+VOID
+ODM_UpdateNoisyState(
+	IN	PDM_ODM_T	pDM_Odm,
+	IN 	BOOLEAN 	bNoisyStateFromC2H
+);
+
+u4Byte
+Set_RA_DM_Ratrbitmap_by_Noisy(
+	IN	PDM_ODM_T	pDM_Odm,
+	IN	WIRELESS_MODE	WirelessMode,
+	IN	u4Byte			ratr_bitmap,
+	IN	u1Byte			rssi_level
+);
 
 VOID
 ODM_UpdateInitRate(
 	IN	PDM_ODM_T	pDM_Odm,
 	IN	u1Byte		Rate
 	);
+
+VOID
+ODM_DynamicARFBSelect(
+	IN		PDM_ODM_T		pDM_Odm,
+	IN 		u1Byte			rate,
+	IN  		BOOLEAN			Collision_State
+	);
+
 #if (DM_ODM_SUPPORT_TYPE == ODM_CE)
 void odm_dtc(PDM_ODM_T pDM_Odm);
 #endif /* #if (DM_ODM_SUPPORT_TYPE == ODM_CE) */

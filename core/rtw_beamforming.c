@@ -520,7 +520,6 @@ BEAMFORMING_CAP beamforming_get_beamform_cap(struct beamforming_info	*pBeamInfo)
 void	beamforming_wk_hdl(_adapter *padapter, u8 type, u8 *pbuf)
 {
 	struct pwrctrl_priv		*pwrpriv = adapter_to_pwrctl(padapter);
-	struct wifidirect_info	*pwdinfo= &(padapter->wdinfo);
 
 _func_enter_;
 
@@ -545,7 +544,6 @@ u8	beamforming_wk_cmd(_adapter*padapter, s32 type, u8 *pbuf, s32 size, u8 enqueu
 {
 	struct cmd_obj	*ph2c;
 	struct drvextra_cmd_parm	*pdrvextra_cmd_parm;
-	struct wifidirect_info	*pwdinfo= &(padapter->wdinfo);
 	struct cmd_priv	*pcmdpriv = &padapter->cmdpriv;
 	u8	res = _SUCCESS;
 

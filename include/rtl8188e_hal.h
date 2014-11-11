@@ -289,4 +289,11 @@ void _InitTransferPageSize(PADAPTER padapter);
 void SetHwReg8188E(PADAPTER padapter, u8 variable, u8 *val);
 void GetHwReg8188E(PADAPTER padapter, u8 variable, u8 *val);
 
+#ifdef CONFIG_WOWLAN
+void rtw_get_current_ip_address(PADAPTER padapter, u8 *pcurrentip);
+void rtw_get_sec_iv(PADAPTER padapter, u8*pcur_dot11txpn, u8 *StaAddr);
+void rtw_set_sec_pn(_adapter *padapter);
+#endif
+
 #endif //__RTL8188E_HAL_H__
+

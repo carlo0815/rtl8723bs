@@ -184,7 +184,6 @@ odm_ConfigBB_TXPWR_LMT_8723B(
 		PHY_SetTxPowerLimit(pDM_Odm->Adapter, Regulation, Band,
 			Bandwidth, RateSection, RfPath, Channel, PowerLimit);
 #endif
-
 }
 
 #endif

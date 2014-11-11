@@ -300,12 +300,13 @@ void	Hal_ReadChannelPlan8812A(PADAPTER padapter, u8 *hwinfo, BOOLEAN AutoLoadFai
 void	Hal_EfuseParseXtal_8812A(PADAPTER pAdapter, u8* hwinfo,BOOLEAN AutoLoadFail);
 void	Hal_ReadAntennaDiversity8812A(PADAPTER pAdapter,u8* PROMContent,BOOLEAN AutoLoadFail);
 void	Hal_ReadAntennaDiversity8821A(PADAPTER pAdapter, u8* PROMContent, BOOLEAN AutoLoadFail);
-void	Hal_ReadPAType_8812A(PADAPTER Adapter,u8* PROMContent, BOOLEAN AutoloadFail);
+void	Hal_ReadAmplifierType_8812A(PADAPTER Adapter,u8* PROMContent, BOOLEAN AutoloadFail);
 void	Hal_ReadPAType_8821A(PADAPTER Adapter,u8* PROMContent, BOOLEAN AutoloadFail);
 void	Hal_ReadRFEType_8812A(PADAPTER Adapter,u8* PROMContent, BOOLEAN AutoloadFail);
 void	Hal_EfuseParseBTCoexistInfo8812A(PADAPTER Adapter, u8* hwinfo, BOOLEAN AutoLoadFail);
 void	Hal_EfuseParseBTCoexistInfo8821A(PADAPTER Adapter, u8 *hwinfo, BOOLEAN AutoLoadFail);
 void	hal_ReadUsbType_8812AU(PADAPTER Adapter, u8 *PROMContent, BOOLEAN AutoloadFail);
+int 	FirmwareDownloadBT(PADAPTER Adapter, PRT_MP_FIRMWARE pFirmware);
 
 BOOLEAN HalDetectPwrDownMode8812(PADAPTER Adapter);
 

@@ -465,20 +465,8 @@ MPT_InitializeAdapter(
 	pMptCtx->bMassProdTest = _FALSE;
 	pMptCtx->bMptIndexEven = _TRUE;	//default gain index is -6.0db
 	pMptCtx->h2cReqNum = 0x0;
-	/* Init mpt event. */
-#if 0 // for Windows
-	NdisInitializeEvent( &(pMptCtx->MptWorkItemEvent) );
-	NdisAllocateSpinLock( &(pMptCtx->MptWorkItemSpinLock) );
-
-	PlatformInitializeWorkItem(
-		Adapter,
-		&(pMptCtx->MptWorkItem),
-		(RT_WORKITEM_CALL_BACK)MPT_WorkItemCallback,
-		(PVOID)Adapter,
-		"MptWorkItem");
-#endif
 	//init for BT MP
-#if defined(CONFIG_RTL8723A) || defined(CONFIG_RTL8723B)
+#if defined(CONFIG_RTL8723A) || defined(CONFIG_RTL8723B) || defined(CONFIG_RTL8821A)
 	pMptCtx->bMPh2c_timeout = _FALSE;
 	pMptCtx->MptH2cRspEvent = _FALSE;
 	pMptCtx->MptBtC2hEvent = _FALSE;
@@ -493,25 +481,21 @@ MPT_InitializeAdapter(
 	rtl8723b_InitAntenna_Selection(pAdapter);
 	if (IS_HARDWARE_TYPE_8723B(pAdapter))
 	{
-		// TODO: <20130206, Kordan> The default setting is wrong, hard-coded here.
-		PHY_SetMacReg(pAdapter, 0x778, 0x3, 0x3);		   		    // Turn off hardware PTA control (Asked by Scott)
-		PHY_SetMacReg(pAdapter, 0x64, bMaskDWord, 0x36000000);    //Fix BT S0/S1
-		PHY_SetMacReg(pAdapter, 0x948, bMaskDWord, 0x0); 	       //Fix BT can't Tx
-
+		mpt_InitHWConfig(pAdapter);
 		// <20130522, Kordan> Turn off equalizer to improve Rx sensitivity. (Asked by EEChou)
 		PHY_SetBBReg(pAdapter, 0xA00, BIT8, 0x0);     		//0xA01[0] = 0
-		mpt_InitHWConfig(pAdapter);
-				// TODO: <20130206, Kordan> The default setting is wrong, hard-coded here.
-		PHY_SetMacReg(pAdapter, 0x778, 0x3, 0x3);					// Turn off hardware PTA control (Asked by Scott)
-		PHY_SetMacReg(pAdapter, 0x64, bMaskDWord, 0x36000000);	 //Fix BT S0/S1
-		PHY_SetMacReg(pAdapter, 0x948, bMaskDWord, 0x0); 		   //Fix BT can't Tx
-
 		PHY_SetRFPathSwitch(pAdapter, 1/*pHalData->bDefaultAntenna*/); //default use Main
+		//<20130522, Kordan> 0x51 and 0x71 should be set immediately after path switched, or they might be overwritten.
+		if ((pHalData->PackageType == PACKAGE_TFBGA79) || (pHalData->PackageType == PACKAGE_TFBGA90))
+					PHY_SetRFReg(pAdapter, ODM_RF_PATH_A, 0x51, bRFRegOffsetMask, 0x6B10E);
+		else
+					PHY_SetRFReg(pAdapter, ODM_RF_PATH_A, 0x51, bRFRegOffsetMask, 0x6B04E);
 	}
 #endif
 
 	pMptCtx->bMptWorkItemInProgress = _FALSE;
 	pMptCtx->CurrMptAct = NULL;
+	pMptCtx->MptRfPath = ODM_RF_PATH_A;
 	//-------------------------------------------------------------------------
 
 #if 1
@@ -730,11 +714,11 @@ u32 mp_join(PADAPTER padapter,u8 mode)
 	_rtw_memcpy(bssid.MacAddress, pmppriv->network_macaddr, ETH_ALEN);
 
 	if( mode==WIFI_FW_ADHOC_STATE ){
-	bssid.Ssid.SsidLength = strlen("mp_pseudo_adhoc");
-	_rtw_memcpy(bssid.Ssid.Ssid, (u8*)"mp_pseudo_adhoc", bssid.Ssid.SsidLength);
-	bssid.InfrastructureMode = Ndis802_11IBSS;
-	bssid.NetworkTypeInUse = Ndis802_11DS;
-	bssid.IELength = 0;
+		bssid.Ssid.SsidLength = strlen("mp_pseudo_adhoc");
+		_rtw_memcpy(bssid.Ssid.Ssid, (u8*)"mp_pseudo_adhoc", bssid.Ssid.SsidLength);
+		bssid.InfrastructureMode = Ndis802_11IBSS;
+		bssid.NetworkTypeInUse = Ndis802_11DS;
+		bssid.IELength = 0;
 
 	}else if(mode==WIFI_FW_STATION_STATE){
 		bssid.Ssid.SsidLength = strlen("mp_pseudo_STATION");
@@ -763,6 +747,7 @@ u32 mp_join(PADAPTER padapter,u8 mode)
 		rtw_free_assoc_resources(padapter, 1);
 	}
 	rtw_msleep_os(500);
+
 	pmppriv->prev_fw_state = get_fwstate(pmlmepriv);
 	if (padapter->registrypriv.mp_mode == 1)
 		pmlmepriv->fw_state = WIFI_MP_STATE;
@@ -775,6 +760,8 @@ u32 mp_join(PADAPTER padapter,u8 mode)
 	}
 #endif
 	set_fwstate(pmlmepriv, _FW_UNDER_LINKING);
+	set_fwstate(pmlmepriv, WIFI_ADHOC_MASTER_STATE);
+
 	#if 1
 	//3 2. create a new psta for mp driver
 	//clear psta in the cur_network, if any
@@ -1528,7 +1515,7 @@ void fill_tx_desc_8723b(PADAPTER padapter)
 void SetPacketTx(PADAPTER padapter)
 {
 	u8 *ptr, *pkt_start, *pkt_end,*fctrl;
-	u32 pkt_size,offset;
+	u32 pkt_size,offset,startPlace,i;
 	struct tx_desc *desc;
 	struct rtw_ieee80211_hdr *hdr;
 	u8 payload;
@@ -1635,9 +1622,20 @@ void SetPacketTx(PADAPTER padapter)
 			payload = 0x00;
 			break;
 	}
-
-	_rtw_memset(ptr, payload, pkt_end - ptr);
-
+	pmp_priv->TXradomBuffer = rtw_zmalloc(4096);
+	if(pmp_priv->TXradomBuffer == NULL)
+	{
+		DBG_871X("mp create random buffer fail!\n");
+	}
+	else
+	{
+		for(i=0;i<4096;i++)
+			pmp_priv->TXradomBuffer[i] = random32() %0xFF;
+	}
+	//startPlace = (u32)(random32() % 3450);
+	_rtw_memcpy(ptr, pmp_priv->TXradomBuffer,pkt_end - ptr);
+	//_rtw_memset(ptr, payload, pkt_end - ptr);
+	rtw_mfree(pmp_priv->TXradomBuffer,4096);
 	//3 6. start thread
 #ifdef PLATFORM_LINUX
 	pmp_priv->tx.PktTxThread = kthread_run(mp_xmit_packet_thread, pmp_priv, "RTW_MP_THREAD");
@@ -2232,10 +2230,7 @@ mpt_ProQueryCalTxPower_8188E(
 	return TxPower;
 }
 
-u1Byte
-MptToMgntRate(
-	IN	ULONG	MptRateIdx
-	)
+u8 MptToMgntRate(u32 	MptRateIdx)
 {
 // Mapped to MGN_XXX defined in MgntGen.h
 	switch (MptRateIdx)

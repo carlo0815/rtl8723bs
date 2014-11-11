@@ -61,6 +61,11 @@ enum Power_Mgnt
 	PS_MODE_NUM,
 };
 
+#ifdef CONFIG_PNO_SUPPORT
+#define MAX_PNO_LIST_COUNT 16
+#define MAX_SCAN_LIST_COUNT 14 //2.4G only
+#endif
+
 /*
 	BIT[2:0] = HW state
 	BIT[3] = Protocol PS state,   0: register active state , 1: register sleep state
@@ -196,6 +201,50 @@ typedef enum _PS_DENY_REASON
 	PS_DENY_OTHERS = 31
 } PS_DENY_REASON;
 
+#ifdef CONFIG_PNO_SUPPORT
+typedef struct pno_nlo_info
+{
+	u32 fast_scan_period;				//Fast scan period
+	u32	ssid_num;				//number of entry
+	u32	slow_scan_period;			//slow scan period
+	u32	fast_scan_iterations;			//Fast scan iterations
+	u8	ssid_length[MAX_PNO_LIST_COUNT];	//SSID Length Array
+	u8	ssid_chiper_info[MAX_PNO_LIST_COUNT];	//Chiper information for security
+	u8	ssid_channel_info[MAX_PNO_LIST_COUNT];	//channel information
+}pno_nlo_info_t;
+
+typedef struct pno_ssid {
+	u32		SSID_len;
+	u8		SSID[32];
+} pno_ssid_t;
+
+typedef struct pno_ssid_list {
+	pno_ssid_t	node[MAX_PNO_LIST_COUNT];
+}pno_ssid_list_t;
+
+typedef struct pno_scan_channel_info
+{
+	u8	channel;
+	u8	tx_power;
+	u8	timeout;
+	u8	active;				//set 1 means active scan, or pasivite scan.
+}pno_scan_channel_info_t;
+
+typedef struct pno_scan_info
+{
+	u8	enableRFE;			//Enable RFE
+	u8	period_scan_time;		//exclusive with fast_scan_period and slow_scan_period
+	u8	periodScan;			//exclusive with fast_scan_period and slow_scan_period
+	u8	orig_80_offset;			//original channel 80 offset
+	u8	orig_40_offset;			//original channel 40 offset
+	u8	orig_bw;			//original bandwidth
+	u8	orig_ch;			//original channel
+	u8	channel_num;			//number of channel
+	u64	rfe_type;			//rfe_type && 0x00000000000000ff
+	pno_scan_channel_info_t ssid_channel_info[MAX_SCAN_LIST_COUNT];
+}pno_scan_info_t;
+#endif //CONFIG_PNO_SUPPORT
+
 struct pwrctrl_priv
 {
 	_pwrlock	lock;
@@ -208,6 +257,7 @@ struct pwrctrl_priv
 	u8	pwr_mode;
 	u8	smart_ps;
 	u8	bcn_ant_mode;
+	u8 	dtim;
 
 	u32	alives;
 	_workitem cpwm_event;
@@ -267,6 +317,13 @@ struct pwrctrl_priv
 	u8		wowlan_unicast;
 	u8		wowlan_pattern_idx;
 	u8		wowlan_wake_reason;
+	u8		wowlan_pno_enable;
+#ifdef CONFIG_PNO_SUPPORT
+	u8		pno_in_resume;
+	pno_nlo_info_t	*pnlo_info;
+	pno_scan_info_t	*pscan_info;
+	pno_ssid_list_t	*pno_ssid_list;
+#endif
 	u32		wowlan_pattern_context[8][5];
 	u64		wowlan_fw_iv;
 #endif // CONFIG_WOWLAN

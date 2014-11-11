@@ -433,6 +433,8 @@ struct mp_priv
 	BOOLEAN bTxBufCkFail;
 
 	MPT_CONTEXT MptCtx;
+
+	u8		*TXradomBuffer;
 };
 
 typedef struct _IOCMD_STRUCT_ {
@@ -451,6 +453,28 @@ struct bb_reg_param {
 	u32 offset;
 	u32 value;
 };
+
+typedef struct _MP_FIRMWARE {
+	FIRMWARE_SOURCE eFWSource;
+#ifdef CONFIG_EMBEDDED_FWIMG
+	u8* 		szFwBuffer;
+#else
+	u8			szFwBuffer[0x8000];
+#endif
+	u32 		ulFwLength;
+
+#ifdef CONFIG_EMBEDDED_FWIMG
+	u8* 		szBTFwBuffer;
+	u8			myBTFwBuffer[0x8000];
+#else
+	u8			szBTFwBuffer[0x8000];
+#endif
+	u32 		ulBTFwLength;
+} RT_MP_FIRMWARE, *PRT_MP_FIRMWARE;
+
+
+
+
 //=======================================================================
 
 #define LOWER 	_TRUE
@@ -754,5 +778,7 @@ extern void _rtw_mp_xmit_priv(struct xmit_priv *pxmitpriv);
 extern void MP_PHY_SetRFPathSwitch(PADAPTER pAdapter ,BOOLEAN bMain);
 extern ULONG mpt_ProQueryCalTxPower(PADAPTER	pAdapter,u8 RfPath);
 extern void MPT_PwrCtlDM(PADAPTER padapter, u32 bstart);
+extern u8 MptToMgntRate(u32	MptRateIdx);
 
 #endif //_RTW_MP_H_
+

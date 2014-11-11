@@ -42,7 +42,7 @@
 		#elif defined(CONFIG_SDIO_HCI)
 			#define NR_RECVBUFF (8)
 		#else
-			#define NR_RECVBUFF (4)
+			#define NR_RECVBUFF (8)
 		#endif
 	#endif //CONFIG_SINGLE_RECV_BUF
 
@@ -344,7 +344,6 @@ struct recv_priv
 	u64	rx_bytes;
 	u64	rx_pkts;
 	u64	rx_drop;
-	u64	last_rx_bytes;
 
 	uint  rx_icv_err;
 	uint  rx_largepacket_crcerr;
