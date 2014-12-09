@@ -1,7 +1,7 @@
 /******************************************************************************
  *
  * Copyright(c) 2007 - 2011 Realtek Corporation. All rights reserved.
- *
+ *                                        
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of version 2 of the GNU General Public License as
  * published by the Free Software Foundation.
@@ -20,7 +20,7 @@
 
 #include "../odm_precomp.h"
 
-#if (RTL8723B_SUPPORT == 1)
+#if (RTL8723B_SUPPORT == 1)  
 
 void
 odm_ConfigRFReg_8723B(
@@ -32,10 +32,10 @@ odm_ConfigRFReg_8723B(
 	)
 {
     if(Addr == 0xfe || Addr == 0xffe)
-	{
+	{ 					  
 		#ifdef CONFIG_LONG_DELAY_ISSUE
 		ODM_sleep_ms(50);
-		#else
+		#else		
 		ODM_delay_ms(50);
 		#endif
 	}
@@ -44,11 +44,55 @@ odm_ConfigRFReg_8723B(
 		ODM_SetRFReg(pDM_Odm, RF_PATH, RegAddr, bRFRegOffsetMask, Data);
 		// Add 1us delay between BB/RF register setting.
 		ODM_delay_us(1);
-	}
+
+		//For disable/enable test in high temperature, the B6 value will fail to fill. Suggestion by BB Stanley, 2013.06.25.
+		if(Addr == 0xb6)
+		{
+			u4Byte getvalue=0;
+			u1Byte	count =0;
+			getvalue = ODM_GetRFReg(pDM_Odm, RF_PATH, Addr, bMaskDWord);	
+
+			ODM_delay_us(1);
+			
+			while((getvalue>>8)!=(Data>>8))
+			{
+				count++;
+				ODM_SetRFReg(pDM_Odm, RF_PATH, RegAddr, bRFRegOffsetMask, Data);
+				ODM_delay_us(1);
+				getvalue = ODM_GetRFReg(pDM_Odm, RF_PATH, Addr, bMaskDWord);
+				ODM_RT_TRACE(pDM_Odm,ODM_COMP_INIT, ODM_DBG_TRACE, ("===> ODM_ConfigRFWithHeaderFile: [B6] getvalue 0x%x, Data 0x%x, count %d\n", getvalue, Data,count));			
+				if(count>5)
+					break;
+			}
+		}
+
+		if(Addr == 0xb2)
+		{
+			u4Byte getvalue=0;
+			u1Byte	count =0;
+			getvalue = ODM_GetRFReg(pDM_Odm, RF_PATH, Addr, bMaskDWord);	
+
+			ODM_delay_us(1);
+			
+			while(getvalue!=Data)
+			{
+				count++;
+				ODM_SetRFReg(pDM_Odm, RF_PATH, RegAddr, bRFRegOffsetMask, Data);
+				ODM_delay_us(1);
+				//Do LCK againg 
+				ODM_SetRFReg(pDM_Odm, RF_PATH, 0x18, bRFRegOffsetMask, 0x0fc07);
+				ODM_delay_us(1);
+				getvalue = ODM_GetRFReg(pDM_Odm, RF_PATH, Addr, bMaskDWord);
+				ODM_RT_TRACE(pDM_Odm,ODM_COMP_INIT, ODM_DBG_TRACE, ("===> ODM_ConfigRFWithHeaderFile: [B2] getvalue 0x%x, Data 0x%x, count %d\n", getvalue, Data,count));			
+				if(count>5)
+					break;
+			}
+		}			
+	}	
 }
 
 
-void
+void 
 odm_ConfigRF_RadioA_8723B(
 	IN 	PDM_ODM_T 				pDM_Odm,
 	IN 	u4Byte 					Addr,
@@ -63,7 +107,7 @@ odm_ConfigRF_RadioA_8723B(
     ODM_RT_TRACE(pDM_Odm,ODM_COMP_INIT, ODM_DBG_TRACE, ("===> ODM_ConfigRFWithHeaderFile: [RadioA] %08X %08X\n", Addr, Data));
 }
 
-void
+void 
 odm_ConfigRF_RadioB_8723B(
 	IN 	PDM_ODM_T 				pDM_Odm,
 	IN 	u4Byte 					Addr,
@@ -74,23 +118,23 @@ odm_ConfigRF_RadioB_8723B(
 	u4Byte	maskforPhySet= (u4Byte)(content&0xE000);
 
     odm_ConfigRFReg_8723B(pDM_Odm, Addr, Data, ODM_RF_PATH_B, Addr|maskforPhySet);
-
+	
 	ODM_RT_TRACE(pDM_Odm,ODM_COMP_INIT, ODM_DBG_TRACE, ("===> ODM_ConfigRFWithHeaderFile: [RadioB] %08X %08X\n", Addr, Data));
-
+    
 }
 
-void
+void 
 odm_ConfigMAC_8723B(
-	IN 	PDM_ODM_T 	pDM_Odm,
-	IN 	u4Byte 		Addr,
-	IN 	u1Byte 		Data
-	)
+ 	IN 	PDM_ODM_T 	pDM_Odm,
+ 	IN 	u4Byte 		Addr,
+ 	IN 	u1Byte 		Data
+ 	)
 {
 	ODM_Write1Byte(pDM_Odm, Addr, Data);
     ODM_RT_TRACE(pDM_Odm,ODM_COMP_INIT, ODM_DBG_TRACE, ("===> ODM_ConfigMACWithHeaderFile: [MAC_REG] %08X %08X\n", Addr, Data));
 }
 
-void
+void 
 odm_ConfigBB_AGC_8723B(
     IN 	PDM_ODM_T 	pDM_Odm,
     IN 	u4Byte 		Addr,
@@ -98,7 +142,7 @@ odm_ConfigBB_AGC_8723B(
     IN 	u4Byte 		Data
     )
 {
-	ODM_SetBBReg(pDM_Odm, Addr, Bitmask, Data);
+	ODM_SetBBReg(pDM_Odm, Addr, Bitmask, Data);		
 	// Add 1us delay between BB/RF register setting.
 	ODM_delay_us(1);
 
@@ -115,14 +159,14 @@ odm_ConfigBB_PHY_REG_PG_8723B(
     IN 	u4Byte 		Bitmask,
     IN 	u4Byte 		Data
     )
-{
+{    
 	if (Addr == 0xfe || Addr == 0xffe)
 		#ifdef CONFIG_LONG_DELAY_ISSUE
 		ODM_sleep_ms(50);
-		#else
+		#else		
 		ODM_delay_ms(50);
 		#endif
-    else
+    else 
     {
 #if	!(DM_ODM_SUPPORT_TYPE&ODM_AP)
 	    PHY_StoreTxPowerByRate(pDM_Odm->Adapter, Band, RfPath, TxNum, Addr, Bitmask, Data);
@@ -131,18 +175,18 @@ odm_ConfigBB_PHY_REG_PG_8723B(
 	ODM_RT_TRACE(pDM_Odm,ODM_COMP_INIT, ODM_DBG_LOUD, ("===> ODM_ConfigBBWithHeaderFile: [PHY_REG] %08X %08X %08X\n", Addr, Bitmask, Data));
 }
 
-void
+void 
 odm_ConfigBB_PHY_8723B(
 	IN 	PDM_ODM_T 	pDM_Odm,
     IN 	u4Byte 		Addr,
     IN 	u4Byte 		Bitmask,
     IN 	u4Byte 		Data
     )
-{
+{    
 	if (Addr == 0xfe)
 		#ifdef CONFIG_LONG_DELAY_ISSUE
 		ODM_sleep_ms(50);
-		#else
+		#else		
 		ODM_delay_ms(50);
 		#endif
 	else if (Addr == 0xfd)
@@ -155,11 +199,11 @@ odm_ConfigBB_PHY_8723B(
 		ODM_delay_us(5);
 	else if (Addr == 0xf9)
 		ODM_delay_us(1);
-	else
+	else 
 	{
-		ODM_SetBBReg(pDM_Odm, Addr, Bitmask, Data);
+		ODM_SetBBReg(pDM_Odm, Addr, Bitmask, Data);		
 	}
-
+	
 	// Add 1us delay between BB/RF register setting.
 	ODM_delay_us(1);
     ODM_RT_TRACE(pDM_Odm,ODM_COMP_INIT, ODM_DBG_TRACE, ("===> ODM_ConfigBBWithHeaderFile: [PHY_REG] %08X %08X\n", Addr, Data));
@@ -176,7 +220,7 @@ odm_ConfigBB_TXPWR_LMT_8723B(
 	IN	pu1Byte 	Channel,
 	IN	pu1Byte 	PowerLimit
 	)
-{
+{	
 #if (DM_ODM_SUPPORT_TYPE & (ODM_WIN))
 		PHY_SetTxPowerLimit(pDM_Odm, Regulation, Band,
 			Bandwidth, RateSection, RfPath, Channel, PowerLimit);
@@ -187,3 +231,4 @@ odm_ConfigBB_TXPWR_LMT_8723B(
 }
 
 #endif
+

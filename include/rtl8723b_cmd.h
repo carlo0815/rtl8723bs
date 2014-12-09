@@ -30,33 +30,33 @@ enum h2c_cmd_8723B{
 	H2C_8723B_MEDIA_STATUS_RPT = 0x01,
 	H2C_8723B_SCAN_ENABLE = 0x02,
 	H2C_8723B_KEEP_ALIVE = 0x03,
-	H2C_8723B_DISCON_DECISION = 0x04,
-	H2C_8723B_PSD_OFFLOAD = 0x05,
-	H2C_8723B_AP_OFFLOAD = 0x08,
-	H2C_8723B_BCN_RSVDPAGE = 0x09,
-	H2C_8723B_PROBERSP_RSVDPAGE = 0x0A,
-	H2C_8723B_FCS_RSVDPAGE = 0x10,
-	H2C_8723B_FCS_INFO = 0x11,
+	H2C_8723B_DISCON_DECISION = 0x04,	
+	H2C_8723B_PSD_OFFLOAD = 0x05,	
+	H2C_8723B_AP_OFFLOAD = 0x08,	
+	H2C_8723B_BCN_RSVDPAGE = 0x09,	
+	H2C_8723B_PROBERSP_RSVDPAGE = 0x0A,	
+	H2C_8723B_FCS_RSVDPAGE = 0x10,	
+	H2C_8723B_FCS_INFO = 0x11,	
+	H2C_8723B_AP_WOW_GPIO_CTRL = 0x13,
 
 	//PoweSave Class: 001
 	H2C_8723B_SET_PWR_MODE = 0x20,
 	H2C_8723B_PS_TUNING_PARA = 0x21,
 	H2C_8723B_PS_TUNING_PARA2 = 0x22,
-	H2C_8723B_P2P_LPS_PARAM = 0x23,
-	H2C_8723B_P2P_PS_OFFLOAD = 0x24,
-	H2C_8723B_PS_SCAN_ENABLE = 0x25,
-	H2C_8723B_SAP_PS_ = 0x26,
+	H2C_8723B_P2P_LPS_PARAM = 0x23,	
+	H2C_8723B_P2P_PS_OFFLOAD = 0x24,	
+	H2C_8723B_PS_SCAN_ENABLE = 0x25,	
+	H2C_8723B_SAP_PS_ = 0x26,	
 	H2C_8723B_INACTIVE_PS_ = 0x27, //Inactive_PS
 	H2C_8723B_FWLPS_IN_IPS_ = 0x28,
-
-
+	
 	//Dynamic Mechanism Class: 010
-	H2C_8723B_MACID_CFG = 0x40,
-	H2C_8723B_TXBF = 0x41,
-	H2C_8723B_RSSI_SETTING = 0x42,
-	H2C_8723B_AP_REQ_TXRPT = 0x43,
-	H2C_8723B_INIT_RATE_COLLECT = 0x44,
-
+	H2C_8723B_MACID_CFG = 0x40,	
+	H2C_8723B_TXBF = 0x41,	
+	H2C_8723B_RSSI_SETTING = 0x42,	
+	H2C_8723B_AP_REQ_TXRPT = 0x43,	
+	H2C_8723B_INIT_RATE_COLLECT = 0x44,	
+	
 	//BT Class: 011
 	H2C_8723B_B_TYPE_TDMA = 0x60,
 	H2C_8723B_BT_INFO = 0x61,
@@ -69,33 +69,36 @@ enum h2c_cmd_8723B{
 	H2C_8723B_BT_CONTROL = 0x68,
 	H2C_8723B_BT_WIFI_CTRL = 0x69,
 	H2C_8723B_BT_FW_PATCH = 0x6A,
-
+	H2C_8723B_BT_WLAN_CALIBRATION = 0x6D,	
+	
 	//WOWLAN Class: 100
 	H2C_8723B_WOWLAN = 0x80,
 	H2C_8723B_REMOTE_WAKE_CTRL = 0x81,
-	H2C_8723B_AOAC_GLOBAL_INFO = 0x82,
-	H2C_8723B_AOAC_RSVD_PAGE = 0x83,
+	H2C_8723B_AOAC_GLOBAL_INFO = 0x82,	
+	H2C_8723B_AOAC_RSVD_PAGE = 0x83,	
 	H2C_8723B_AOAC_RSVD_PAGE2 = 0x84,
 	H2C_8723B_D0_SCAN_OFFLOAD_CTRL = 0x85,
 	H2C_8723B_D0_SCAN_OFFLOAD_INFO = 0x86,
 	H2C_8723B_CHNL_SWITCH_OFFLOAD = 0x87,
 
 	H2C_8723B_RESET_TSF = 0xC0,
-
 	H2C_8723B_MAXID,
 };
-
+/* move to hal_com_h2c.h
 #define H2C_8723B_RSVDPAGE_LOC_LEN		5
 #define H2C_8723B_MEDIA_STATUS_RPT_LEN		3
 #define H2C_8723B_KEEP_ALIVE_CTRL_LEN	2
 #define H2C_8723B_DISCON_DECISION_LEN	 	3
-//#define H2C_8723B_AP_OFFLOAD_LEN		3
+#define H2C_8723B_BCN_RSVDPAGE_LEN		5
+#define H2C_8723B_PROBERSP_RSVDPAGE_LEN		5
+#define H2C_8723B_AP_OFFLOAD_LEN		3
+#define H2C_8723B_AP_WOW_GPIO_CTRL_LEN		3
 #define H2C_8723B_PWRMODE_LEN			7
 #define H2C_8723B_PSTUNEPARAM_LEN			4
 #define H2C_8723B_MACID_CFG_LEN	 	7
 #define H2C_8723B_BTMP_OPER_LEN			4
 #define H2C_8723B_WOWLAN_LEN			4
-#define H2C_8723B_REMOTE_WAKE_CTRL_LEN	2
+#define H2C_8723B_REMOTE_WAKE_CTRL_LEN	3
 #define H2C_8723B_AOAC_GLOBAL_INFO_LEN	2
 #define H2C_8723B_AOAC_RSVDPAGE_LOC_LEN	7
 #define H2C_8723B_SCAN_OFFLOAD_CTRL_LEN	4
@@ -104,7 +107,7 @@ enum h2c_cmd_8723B{
 #define H2C_8723B_AP_REQ_TXRPT_LEN		2
 #define H2C_8723B_FORCE_BT_TXPWR_LEN		3
 
-#ifdef CONFIG_WOWLAN
+#ifdef CONFIG_WOWLAN	
 #define eqMacAddr(a,b)						( ((a)[0]==(b)[0] && (a)[1]==(b)[1] && (a)[2]==(b)[2] && (a)[3]==(b)[3] && (a)[4]==(b)[4] && (a)[5]==(b)[5]) ? 1:0 )
 #define cpMacAddr(des,src)					((des)[0]=(src)[0],(des)[1]=(src)[1],(des)[2]=(src)[2],(des)[3]=(src)[3],(des)[4]=(src)[4],(des)[5]=(src)[5])
 #define cpIpAddr(des,src)					((des)[0]=(src)[0],(des)[1]=(src)[1],(des)[2]=(src)[2],(des)[3]=(src)[3])
@@ -148,43 +151,43 @@ enum h2c_cmd_8723B{
 #define FW_REALWOWLAN_EN				BIT(5)
 
 #endif //CONFIG_WOWLAN
-
+*/
 //---------------------------------------------------------------------------------------------------------//
 //----------------------------------    H2C CMD CONTENT    --------------------------------------------------//
 //---------------------------------------------------------------------------------------------------------//
 //_RSVDPAGE_LOC_CMD_0x00
-#define SET_8723B_H2CCMD_RSVDPAGE_LOC_PROBE_RSP(__pH2CCmd, __Value)		SET_BITS_TO_LE_1BYTE(__pH2CCmd, 0, 8, __Value)
-#define SET_8723B_H2CCMD_RSVDPAGE_LOC_PSPOLL(__pH2CCmd, __Value)			SET_BITS_TO_LE_1BYTE((__pH2CCmd)+1, 0, 8, __Value)
-#define SET_8723B_H2CCMD_RSVDPAGE_LOC_NULL_DATA(__pH2CCmd, __Value)		SET_BITS_TO_LE_1BYTE((__pH2CCmd)+2, 0, 8, __Value)
-#define SET_8723B_H2CCMD_RSVDPAGE_LOC_QOS_NULL_DATA(__pH2CCmd, __Value)		SET_BITS_TO_LE_1BYTE((__pH2CCmd)+3, 0, 8, __Value)
-#define SET_8723B_H2CCMD_RSVDPAGE_LOC_BT_QOS_NULL_DATA(__pH2CCmd, __Value)		SET_BITS_TO_LE_1BYTE((__pH2CCmd)+4, 0, 8, __Value)
+#define SET_8723B_H2CCMD_RSVDPAGE_LOC_PROBE_RSP(__pH2CCmd, __Value)			SET_BITS_TO_LE_1BYTE_8BIT(__pH2CCmd, 0, 8, __Value)
+#define SET_8723B_H2CCMD_RSVDPAGE_LOC_PSPOLL(__pH2CCmd, __Value)				SET_BITS_TO_LE_1BYTE_8BIT((__pH2CCmd)+1, 0, 8, __Value)
+#define SET_8723B_H2CCMD_RSVDPAGE_LOC_NULL_DATA(__pH2CCmd, __Value)			SET_BITS_TO_LE_1BYTE_8BIT((__pH2CCmd)+2, 0, 8, __Value)
+#define SET_8723B_H2CCMD_RSVDPAGE_LOC_QOS_NULL_DATA(__pH2CCmd, __Value)		SET_BITS_TO_LE_1BYTE_8BIT((__pH2CCmd)+3, 0, 8, __Value)
+#define SET_8723B_H2CCMD_RSVDPAGE_LOC_BT_QOS_NULL_DATA(__pH2CCmd, __Value)	SET_BITS_TO_LE_1BYTE_8BIT((__pH2CCmd)+4, 0, 8, __Value)
 
 //_MEDIA_STATUS_RPT_PARM_CMD_0x01
-#define SET_8723B_H2CCMD_MSRRPT_PARM_OPMODE(__pH2CCmd, __Value)		SET_BITS_TO_LE_1BYTE(__pH2CCmd, 0, 1, __Value)
-#define SET_8723B_H2CCMD_MSRRPT_PARM_MACID_IND(__pH2CCmd, __Value)		SET_BITS_TO_LE_1BYTE(__pH2CCmd, 1, 1, __Value)
-#define SET_8723B_H2CCMD_MSRRPT_PARM_MACID(__pH2CCmd, __Value)			SET_BITS_TO_LE_1BYTE(__pH2CCmd+1, 0, 8, __Value)
-#define SET_8723B_H2CCMD_MSRRPT_PARM_MACID_END(__pH2CCmd, __Value)			SET_BITS_TO_LE_1BYTE(__pH2CCmd+2, 0, 8, __Value)
+#define SET_8723B_H2CCMD_MSRRPT_PARM_OPMODE(__pH2CCmd, __Value)				SET_BITS_TO_LE_1BYTE(__pH2CCmd, 0, 1, __Value)
+#define SET_8723B_H2CCMD_MSRRPT_PARM_MACID_IND(__pH2CCmd, __Value)			SET_BITS_TO_LE_1BYTE(__pH2CCmd, 1, 1, __Value)
+#define SET_8723B_H2CCMD_MSRRPT_PARM_MACID(__pH2CCmd, __Value)				SET_BITS_TO_LE_1BYTE_8BIT(__pH2CCmd+1, 0, 8, __Value)
+#define SET_8723B_H2CCMD_MSRRPT_PARM_MACID_END(__pH2CCmd, __Value)			SET_BITS_TO_LE_1BYTE_8BIT(__pH2CCmd+2, 0, 8, __Value)
 
 //_KEEP_ALIVE_CMD_0x03
-#define SET_8723B_H2CCMD_KEEPALIVE_PARM_ENABLE(__pH2CCmd, __Value)		SET_BITS_TO_LE_1BYTE(__pH2CCmd, 0, 1, __Value)
-#define SET_8723B_H2CCMD_KEEPALIVE_PARM_ADOPT(__pH2CCmd, __Value)		SET_BITS_TO_LE_1BYTE(__pH2CCmd, 1, 1, __Value)
-#define SET_8723B_H2CCMD_KEEPALIVE_PARM_PKT_TYPE(__pH2CCmd, __Value)		SET_BITS_TO_LE_1BYTE(__pH2CCmd, 2, 1, __Value)
-#define SET_8723B_H2CCMD_KEEPALIVE_PARM_CHECK_PERIOD(__pH2CCmd, __Value)		SET_BITS_TO_LE_1BYTE(__pH2CCmd+1, 0, 8, __Value)
+#define SET_8723B_H2CCMD_KEEPALIVE_PARM_ENABLE(__pH2CCmd, __Value)			SET_BITS_TO_LE_1BYTE(__pH2CCmd, 0, 1, __Value)
+#define SET_8723B_H2CCMD_KEEPALIVE_PARM_ADOPT(__pH2CCmd, __Value)				SET_BITS_TO_LE_1BYTE(__pH2CCmd, 1, 1, __Value)
+#define SET_8723B_H2CCMD_KEEPALIVE_PARM_PKT_TYPE(__pH2CCmd, __Value)			SET_BITS_TO_LE_1BYTE(__pH2CCmd, 2, 1, __Value)
+#define SET_8723B_H2CCMD_KEEPALIVE_PARM_CHECK_PERIOD(__pH2CCmd, __Value)		SET_BITS_TO_LE_1BYTE_8BIT(__pH2CCmd+1, 0, 8, __Value)
 
 //_DISCONNECT_DECISION_CMD_0x04
-#define SET_8723B_H2CCMD_DISCONDECISION_PARM_ENABLE(__pH2CCmd, __Value)		SET_BITS_TO_LE_1BYTE(__pH2CCmd, 0, 1, __Value)
-#define SET_8723B_H2CCMD_DISCONDECISION_PARM_ADOPT(__pH2CCmd, __Value)		SET_BITS_TO_LE_1BYTE(__pH2CCmd, 1, 1, __Value)
-#define SET_8723B_H2CCMD_DISCONDECISION_PARM_CHECK_PERIOD(__pH2CCmd, __Value)		SET_BITS_TO_LE_1BYTE(__pH2CCmd+1, 0, 8, __Value)
-#define SET_8723B_H2CCMD_DISCONDECISION_PARM_TRY_PKT_NUM(__pH2CCmd, __Value)		SET_BITS_TO_LE_1BYTE(__pH2CCmd+2, 0, 8, __Value)
+#define SET_8723B_H2CCMD_DISCONDECISION_PARM_ENABLE(__pH2CCmd, __Value)			SET_BITS_TO_LE_1BYTE(__pH2CCmd, 0, 1, __Value)
+#define SET_8723B_H2CCMD_DISCONDECISION_PARM_ADOPT(__pH2CCmd, __Value)			SET_BITS_TO_LE_1BYTE(__pH2CCmd, 1, 1, __Value)
+#define SET_8723B_H2CCMD_DISCONDECISION_PARM_CHECK_PERIOD(__pH2CCmd, __Value)	SET_BITS_TO_LE_1BYTE_8BIT(__pH2CCmd+1, 0, 8, __Value)
+#define SET_8723B_H2CCMD_DISCONDECISION_PARM_TRY_PKT_NUM(__pH2CCmd, __Value)	SET_BITS_TO_LE_1BYTE_8BIT(__pH2CCmd+2, 0, 8, __Value)
 
 // _PWR_MOD_CMD_0x20
-#define SET_8723B_H2CCMD_PWRMODE_PARM_MODE(__pH2CCmd, __Value)			SET_BITS_TO_LE_1BYTE(__pH2CCmd, 0, 8, __Value)
-#define SET_8723B_H2CCMD_PWRMODE_PARM_RLBM(__pH2CCmd, __Value)			SET_BITS_TO_LE_1BYTE((__pH2CCmd)+1, 0, 4, __Value)
-#define SET_8723B_H2CCMD_PWRMODE_PARM_SMART_PS(__pH2CCmd, __Value)		SET_BITS_TO_LE_1BYTE((__pH2CCmd)+1, 4, 4, __Value)
-#define SET_8723B_H2CCMD_PWRMODE_PARM_BCN_PASS_TIME(__pH2CCmd, __Value)	SET_BITS_TO_LE_1BYTE((__pH2CCmd)+2, 0, 8, __Value)
-#define SET_8723B_H2CCMD_PWRMODE_PARM_ALL_QUEUE_UAPSD(__pH2CCmd, __Value)	SET_BITS_TO_LE_1BYTE((__pH2CCmd)+3, 0, 8, __Value)
-#define SET_8723B_H2CCMD_PWRMODE_PARM_PWR_STATE(__pH2CCmd, __Value)	SET_BITS_TO_LE_1BYTE((__pH2CCmd)+4, 0, 8, __Value)
-#define SET_8723B_H2CCMD_PWRMODE_PARM_BYTE5(__pH2CCmd, __Value)	SET_BITS_TO_LE_1BYTE((__pH2CCmd)+5, 0, 8, __Value)
+#define SET_8723B_H2CCMD_PWRMODE_PARM_MODE(__pH2CCmd, __Value)				SET_BITS_TO_LE_1BYTE_8BIT(__pH2CCmd, 0, 8, __Value)
+#define SET_8723B_H2CCMD_PWRMODE_PARM_RLBM(__pH2CCmd, __Value)				SET_BITS_TO_LE_1BYTE((__pH2CCmd)+1, 0, 4, __Value)
+#define SET_8723B_H2CCMD_PWRMODE_PARM_SMART_PS(__pH2CCmd, __Value)			SET_BITS_TO_LE_1BYTE((__pH2CCmd)+1, 4, 4, __Value)
+#define SET_8723B_H2CCMD_PWRMODE_PARM_BCN_PASS_TIME(__pH2CCmd, __Value)		SET_BITS_TO_LE_1BYTE_8BIT((__pH2CCmd)+2, 0, 8, __Value)
+#define SET_8723B_H2CCMD_PWRMODE_PARM_ALL_QUEUE_UAPSD(__pH2CCmd, __Value)	SET_BITS_TO_LE_1BYTE_8BIT((__pH2CCmd)+3, 0, 8, __Value)
+#define SET_8723B_H2CCMD_PWRMODE_PARM_PWR_STATE(__pH2CCmd, __Value)			SET_BITS_TO_LE_1BYTE_8BIT((__pH2CCmd)+4, 0, 8, __Value)
+#define SET_8723B_H2CCMD_PWRMODE_PARM_BYTE5(__pH2CCmd, __Value)				SET_BITS_TO_LE_1BYTE_8BIT((__pH2CCmd)+5, 0, 8, __Value)
 
 #define GET_8723B_H2CCMD_PWRMODE_PARM_MODE(__pH2CCmd)					LE_BITS_TO_1BYTE(__pH2CCmd, 0, 8)
 
@@ -227,14 +230,15 @@ enum h2c_cmd_8723B{
 #define SET_8723B_H2CCMD_BT_MPOPER_IDX(__pH2CCmd, __Value)							SET_BITS_TO_LE_1BYTE(__pH2CCmd+1, 0, 8, __Value)
 #define SET_8723B_H2CCMD_BT_MPOPER_PARAM1(__pH2CCmd, __Value)							SET_BITS_TO_LE_1BYTE(__pH2CCmd+2, 0, 8, __Value)
 #define SET_8723B_H2CCMD_BT_MPOPER_PARAM2(__pH2CCmd, __Value)							SET_BITS_TO_LE_1BYTE(__pH2CCmd+3, 0, 8, __Value)
+#define SET_8723B_H2CCMD_BT_MPOPER_PARAM3(__pH2CCmd, __Value)							SET_BITS_TO_LE_1BYTE(__pH2CCmd+4, 0, 8, __Value)
 
 // _BT_FW_PATCH_0x6A
 #define SET_8723B_H2CCMD_BT_FW_PATCH_SIZE(__pH2CCmd, __Value)					SET_BITS_TO_LE_2BYTE((pu1Byte)(__pH2CCmd), 0, 16, __Value)
-#define SET_8723B_H2CCMD_BT_FW_PATCH_ADDR0(__pH2CCmd, __Value) 					SET_BITS_TO_LE_1BYTE((__pH2CCmd)+2, 0, 8, __Value)
-#define SET_8723B_H2CCMD_BT_FW_PATCH_ADDR1(__pH2CCmd, __Value) 					SET_BITS_TO_LE_1BYTE((__pH2CCmd)+3, 0, 8, __Value)
-#define SET_8723B_H2CCMD_BT_FW_PATCH_ADDR2(__pH2CCmd, __Value) 					SET_BITS_TO_LE_1BYTE((__pH2CCmd)+4, 0, 8, __Value)
+#define SET_8723B_H2CCMD_BT_FW_PATCH_ADDR0(__pH2CCmd, __Value) 					SET_BITS_TO_LE_1BYTE((__pH2CCmd)+2, 0, 8, __Value) 
+#define SET_8723B_H2CCMD_BT_FW_PATCH_ADDR1(__pH2CCmd, __Value) 					SET_BITS_TO_LE_1BYTE((__pH2CCmd)+3, 0, 8, __Value) 
+#define SET_8723B_H2CCMD_BT_FW_PATCH_ADDR2(__pH2CCmd, __Value) 					SET_BITS_TO_LE_1BYTE((__pH2CCmd)+4, 0, 8, __Value) 
 #define SET_8723B_H2CCMD_BT_FW_PATCH_ADDR3(__pH2CCmd, __Value) 					SET_BITS_TO_LE_1BYTE((__pH2CCmd)+5, 0, 8, __Value)
-
+/* move to hal_com_h2c.h
 // _WoWLAN PARAM_CMD_0x80
 #define SET_8723B_H2CCMD_WOWLAN_FUNC_ENABLE(__pH2CCmd, __Value)		SET_BITS_TO_LE_1BYTE(__pH2CCmd, 0, 1, __Value)
 #define SET_8723B_H2CCMD_WOWLAN_PATTERN_MATCH_ENABLE(__pH2CCmd, __Value)		SET_BITS_TO_LE_1BYTE(__pH2CCmd, 1, 1, __Value)
@@ -283,10 +287,12 @@ enum h2c_cmd_8723B{
 #define SET_8723B_H2CCMD_AOAC_RSVDPAGE_LOC_SCAN_INFO(__pH2CCmd, __Value)	SET_BITS_TO_LE_1BYTE((__pH2CCmd)+2, 0, 8, __Value)
 #define SET_8723B_H2CCMD_AOAC_RSVDPAGE_LOC_SSID_INFO(__pH2CCmd, __Value)	SET_BITS_TO_LE_1BYTE((__pH2CCmd)+3, 0, 8, __Value)
 #endif //CONFIG_PNO_SUPPORT
+*/
 
 //---------------------------------------------------------------------------------------------------------//
 //-------------------------------------------    Structure    --------------------------------------------------//
 //---------------------------------------------------------------------------------------------------------//
+/* move to hal_com_h2c.h
 typedef struct _RSVDPAGE_LOC {
 	u8 LocProbeRsp;
 	u8 LocPsPoll;
@@ -311,8 +317,11 @@ typedef struct _RSVDPAGE_LOC {
 	u8 LocProbePacket;
 #endif //CONFIG_PNO_SUPPORT
 #endif //CONFIG_WOWLAN
+#ifdef CONFIG_AP_WOWLAN
+	u8 LocApOffloadBCN;
+#endif //CONFIG_AP_WOWLAN
 } RSVDPAGE_LOC_8723B, *PRSVDPAGE_LOC_8723B;
-
+*/
 
 //---------------------------------------------------------------------------------------------------------//
 //----------------------------------    Function Statement     --------------------------------------------------//
@@ -339,8 +348,9 @@ void rtl8723b_set_p2p_ps_offload_cmd(PADAPTER padapter, u8 p2p_ps_state);
 
 void CheckFwRsvdPageContent(PADAPTER padapter);
 
-#ifdef CONFIG_WOWLAN
+#if defined(CONFIG_WOWLAN) || defined(CONFIG_AP_WOWLAN)
 void rtl8723b_set_wowlan_cmd(_adapter* padapter, u8 enable);
+void rtl8723b_set_ap_wowlan_cmd(_adapter* padapter, u8 enable);
 void SetFwRelatedForWoWLAN8723b(_adapter* padapter, u8 bHostIsGoingtoSleep);
 #endif//CONFIG_WOWLAN
 

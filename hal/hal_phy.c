@@ -1,7 +1,7 @@
 /******************************************************************************
  *
  * Copyright(c) 2007 - 2011 Realtek Corporation. All rights reserved.
- *
+ *                                        
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of version 2 of the GNU General Public License as
  * published by the Free Software Foundation.
@@ -33,7 +33,7 @@ static RF_SHADOW_T RF_Shadow[RF6052_MAX_PATH][RF6052_MAX_REG];
 * OverView:	Get shifted position of the BitMask
 *
 * Input:
-*			u4Byte		BitMask,
+*			u4Byte		BitMask,	
 *
 * Output:	none
 * Return:		u4Byte		Return the shift bit bit position of the mask
@@ -165,7 +165,7 @@ PHY_RFShadowCompareAll(
 
 	for (eRFPath = 0; eRFPath < RF6052_MAX_PATH; eRFPath++)
 	{
-		for (Offset = 0; Offset <= maxReg; Offset++)
+		for (Offset = 0; Offset < maxReg; Offset++)
 		{
 			PHY_RFShadowCompare(Adapter, eRFPath, Offset);
 		}
@@ -183,7 +183,7 @@ PHY_RFShadowRecorverAll(
 
 	for (eRFPath = 0; eRFPath < RF6052_MAX_PATH; eRFPath++)
 	{
-		for (Offset = 0; Offset <= maxReg; Offset++)
+		for (Offset = 0; Offset < maxReg; Offset++)
 		{
 			PHY_RFShadowRecorver(Adapter, eRFPath, Offset);
 		}
@@ -227,7 +227,7 @@ PHY_RFShadowCompareFlagSetAll(
 
 	for (eRFPath = 0; eRFPath < RF6052_MAX_PATH; eRFPath++)
 	{
-		for (Offset = 0; Offset <= maxReg; Offset++)
+		for (Offset = 0; Offset < maxReg; Offset++)
 		{
 			// 2008/11/20 MH For S3S4 test, we only check reg 26/27 now!!!!
 			if (Offset != 0x26 && Offset != 0x27)
@@ -249,7 +249,7 @@ PHY_RFShadowRecorverFlagSetAll(
 
 	for (eRFPath = 0; eRFPath < RF6052_MAX_PATH; eRFPath++)
 	{
-		for (Offset = 0; Offset <= maxReg; Offset++)
+		for (Offset = 0; Offset < maxReg; Offset++)
 		{
 			// 2008/11/20 MH For S3S4 test, we only check reg 26/27 now!!!!
 			if (Offset != 0x26 && Offset != 0x27)
@@ -270,7 +270,7 @@ PHY_RFShadowRefresh(
 
 	for (eRFPath = 0; eRFPath < RF6052_MAX_PATH; eRFPath++)
 	{
-		for (Offset = 0; Offset <= maxReg; Offset++)
+		for (Offset = 0; Offset < maxReg; Offset++)
 		{
 			RF_Shadow[eRFPath][Offset].Value = 0;
 			RF_Shadow[eRFPath][Offset].Compare = _FALSE;
@@ -281,3 +281,5 @@ PHY_RFShadowRefresh(
 	}
 
 }	/* PHY_RFShadowRead */
+
+

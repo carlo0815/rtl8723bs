@@ -1,7 +1,7 @@
 /******************************************************************************
  *
  * Copyright(c) 2007 - 2011 Realtek Corporation. All rights reserved.
- *
+ *                                        
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of version 2 of the GNU General Public License as
  * published by the Free Software Foundation.
@@ -18,7 +18,7 @@
  *
  ******************************************************************************/
 #ifndef __IOCTL_CFG80211_H__
-#define __IOCTL_CFG80211_H__
+#define __IOCTL_CFG80211_H__ 
 
 
 #if defined(RTW_USE_CFG80211_STA_EVENT)
@@ -49,7 +49,7 @@ struct rtw_wdev_invit_info {
 	} while (0)
 
 struct rtw_wdev_nego_info {
-	u8 state; /* 0: req, 1:rep, 3:conf */
+	u8 state; /* 0: req, 1:rep, 2:conf */
 	u8 peer_mac[ETH_ALEN];
 	u8 active;
 	u8 token;
@@ -78,9 +78,9 @@ struct rtw_wdev_nego_info {
 	} while (0)
 
 struct rtw_wdev_priv
-{
+{	
 	struct wireless_dev *rtw_wdev;
-
+	
 	_adapter *padapter;
 
 	struct cfg80211_scan_request *scan_request;
@@ -102,16 +102,14 @@ struct rtw_wdev_priv
 
 #ifdef CONFIG_CONCURRENT_MODE
 	ATOMIC_T ro_ch_to;
-	ATOMIC_T switch_ch_to;
-#endif
-
+	ATOMIC_T switch_ch_to;	
+#endif	
+	
 };
 
-#define wdev_to_priv(w) ((struct rtw_wdev_priv *)(wdev_priv(w)))
+#define wiphy_to_adapter(x) (*((_adapter**)wiphy_priv(x)))
 
-#define wiphy_to_adapter(x) (_adapter *)(((struct rtw_wdev_priv*)wiphy_priv(x))->padapter)
-
-#define wiphy_to_wdev(x) (struct wireless_dev *)(((struct rtw_wdev_priv*)wiphy_priv(x))->rtw_wdev)
+#define wdev_to_ndev(w) ((w)->netdev)
 
 int rtw_wdev_alloc(_adapter *padapter, struct device *dev);
 void rtw_wdev_free(struct wireless_dev *wdev);
@@ -119,13 +117,14 @@ void rtw_wdev_unregister(struct wireless_dev *wdev);
 
 void rtw_cfg80211_init_wiphy(_adapter *padapter);
 
+void rtw_cfg80211_unlink_bss(_adapter *padapter, struct wlan_network *pnetwork);
 void rtw_cfg80211_surveydone_event_callback(_adapter *padapter);
 struct cfg80211_bss *rtw_cfg80211_inform_bss(_adapter *padapter, struct wlan_network *pnetwork);
 int rtw_cfg80211_check_bss(_adapter *padapter);
 void rtw_cfg80211_ibss_indicate_connect(_adapter *padapter);
 void rtw_cfg80211_indicate_connect(_adapter *padapter);
 void rtw_cfg80211_indicate_disconnect(_adapter *padapter);
-void rtw_cfg80211_indicate_scan_done(struct rtw_wdev_priv *pwdev_priv, bool aborted);
+void rtw_cfg80211_indicate_scan_done(_adapter *adapter, bool aborted);
 
 #ifdef CONFIG_AP_MODE
 void rtw_cfg80211_indicate_sta_assoc(_adapter *padapter, u8 *pmgmt_frame, uint frame_len);
@@ -145,8 +144,10 @@ bool rtw_cfg80211_pwr_mgmt(_adapter *adapter);
 #define rtw_cfg80211_rx_mgmt(adapter, freq, sig_dbm, buf, len, gfp) cfg80211_rx_mgmt((adapter)->pnetdev, freq, buf, len, gfp)
 #elif (LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0))
 #define rtw_cfg80211_rx_mgmt(adapter, freq, sig_dbm, buf, len, gfp) cfg80211_rx_mgmt((adapter)->pnetdev, freq, sig_dbm, buf, len, gfp)
-#else
+#elif (LINUX_VERSION_CODE < KERNEL_VERSION(3,12,0))
 #define rtw_cfg80211_rx_mgmt(adapter, freq, sig_dbm, buf, len, gfp) cfg80211_rx_mgmt((adapter)->rtw_wdev, freq, sig_dbm, buf, len, gfp)
+#else
+#define rtw_cfg80211_rx_mgmt(adapter, freq, sig_dbm, buf, len, gfp) cfg80211_rx_mgmt((adapter)->rtw_wdev, freq, sig_dbm, buf, len,0,gfp)
 #endif
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3,4,0))  && !defined(COMPAT_KERNEL_RELEASE)
@@ -173,3 +174,4 @@ bool rtw_cfg80211_pwr_mgmt(_adapter *adapter);
 #endif
 
 #endif //__IOCTL_CFG80211_H__
+

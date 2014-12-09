@@ -1,7 +1,7 @@
 /******************************************************************************
  *
  * Copyright(c) 2007 - 2011 Realtek Corporation. All rights reserved.
- *
+ *                                        
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of version 2 of the GNU General Public License as
  * published by the Free Software Foundation.
@@ -127,8 +127,9 @@ struct mp_tx
 	u32 count, sended;
 	u8 payload;
 	struct pkt_attrib attrib;
-	struct tx_desc desc;
-	u8 resvdtx[7];
+	//struct tx_desc desc;
+	//u8 resvdtx[7];
+	u8 desc[TXDESC_SIZE];
 	u8 *pallocated_buf;
 	u8 *buf;
 	u32 buf_size, write_size;
@@ -144,25 +145,25 @@ struct mp_tx
 #define u4Byte u32
 #define s4Byte s32
 #define u1Byte		u8
-#define pu1Byte 		u8*
+#define pu1Byte 		u8* 
 
 #define u2Byte		u16
-#define pu2Byte 		u16*
+#define pu2Byte 		u16*		
 
 #define u4Byte		u32
-#define pu4Byte 		u32*
+#define pu4Byte 		u32*	
 
 #define u8Byte		u64
 #define pu8Byte 		u64*
 
 #define s1Byte		s8
-#define ps1Byte 		s8*
+#define ps1Byte 		s8* 
 
 #define s2Byte		s16
-#define ps2Byte 		s16*
+#define ps2Byte 		s16*	
 
 #define s4Byte		s32
-#define ps4Byte 		s32*
+#define ps4Byte 		s32*	
 
 #define s8Byte		s64
 #define ps8Byte 		s64*
@@ -191,7 +192,7 @@ typedef struct _MPT_CONTEXT
 	BOOLEAN		MptH2cRspEvent;
 	BOOLEAN		MptBtC2hEvent;
 	BOOLEAN		bMPh2c_timeout;
-
+	
 	/* 8190 PCI does not support NDIS_WORK_ITEM. */
 	// Work Item for Mass Production Test.
 	//NDIS_WORK_ITEM	MptWorkItem;
@@ -235,13 +236,13 @@ typedef struct _MPT_CONTEXT
 	ULONG			MptRCR;
 	// TRUE if we only receive packets with specific pattern.
 	BOOLEAN			bMptFilterPattern;
-	// Rx OK count, statistics used in Mass Production Test.
-	ULONG			MptRxOkCnt;
-	// Rx CRC32 error count, statistics used in Mass Production Test.
-	ULONG			MptRxCrcErrCnt;
+ 	// Rx OK count, statistics used in Mass Production Test.
+ 	ULONG			MptRxOkCnt;
+ 	// Rx CRC32 error count, statistics used in Mass Production Test.
+ 	ULONG			MptRxCrcErrCnt;
 
 	BOOLEAN			bCckContTx;	// TRUE if we are in CCK Continuous Tx test.
-	BOOLEAN			bOfdmContTx;	// TRUE if we are in OFDM Continuous Tx test.
+ 	BOOLEAN			bOfdmContTx;	// TRUE if we are in OFDM Continuous Tx test.
 	BOOLEAN			bStartContTx; 	// TRUE if we have start Continuous Tx test.
 	// TRUE if we are in Single Carrier Tx test.
 	BOOLEAN			bSingleCarrier;
@@ -267,17 +268,17 @@ typedef struct _MPT_CONTEXT
 	u8		backup0xc30;
 	u8 		backup0x52_RF_A;
 	u8 		backup0x52_RF_B;
-
-	u4Byte			backup0x58_RF_A;
+	
+	u4Byte			backup0x58_RF_A;	
 	u4Byte			backup0x58_RF_B;
-
+	
 	u1Byte			h2cReqNum;
-	u1Byte			c2hBuf[20];
+	u1Byte			c2hBuf[32];
 
     u1Byte          btInBuf[100];
 	ULONG			mptOutLen;
     u1Byte          mptOutBuf[100];
-
+    
 }MPT_CONTEXT, *PMPT_CONTEXT;
 #endif
 //#endif
@@ -315,7 +316,7 @@ typedef struct _MPT_CONTEXT
 /* end of E-Fuse */
 
 //#define RTPRIV_IOCTL_MP 					( SIOCIWFIRSTPRIV + 0x17)
-enum {
+enum {	  
 	WRITE_REG = 1,
 	READ_REG,
 	WRITE_RF,
@@ -346,6 +347,12 @@ enum {
 	CTA_TEST,
 	MP_DISABLE_BT_COEXIST,
 	MP_PwrCtlDM,
+#ifdef CONFIG_WOWLAN
+	MP_WOW_ENABLE,
+#endif
+#ifdef CONFIG_AP_WOWLAN
+	MP_AP_WOW_ENABLE,
+#endif
 	MP_NULL,
 	MP_GET_TXPOWER_INX,
 };
@@ -366,14 +373,16 @@ struct mp_priv
 	//Tx Section
 	u8 TID;
 	u32 tx_pktcount;
+	u32 pktInterval;
 	struct mp_tx tx;
 
 	//Rx Section
 	u32 rx_bssidpktcount;
 	u32 rx_pktcount;
+	u32 rx_pktcount_filter_out;
 	u32 rx_crcerrpktcount;
 	u32 rx_pktloss;
-
+	BOOLEAN  rx_bindicatePkt;
 	struct recv_stat rxstat;
 
 	//RF/BB relative
@@ -391,12 +400,15 @@ struct mp_priv
 	u16 antenna_tx;
 	u16 antenna_rx;
 //	u8 curr_rfpath;
-
+	
 	u8 check_mp_pkt;
 
 	u8 bSetTxPower;
 //	uint ForcedDataRate;
 	u8 mp_dm;
+	u8 mac_filter[ETH_ALEN];
+	u8 bmac_filter;
+	
 	struct wlan_network mp_network;
 	NDIS_802_11_MAC_ADDRESS network_macaddr;
 
@@ -431,7 +443,7 @@ struct mp_priv
 	u32 free_mp_xmitframe_cnt;
 	BOOLEAN bSetRxBssid;
 	BOOLEAN bTxBufCkFail;
-
+	
 	MPT_CONTEXT MptCtx;
 
 	u8		*TXradomBuffer;
@@ -592,7 +604,7 @@ typedef enum _POWER_MODE_ {
 
 // The following enumeration is used to define the value of Reg0xD00[30:28] or JaguarReg0x914[18:16].
 typedef enum _OFDM_TX_MODE {
-	OFDM_ALL_OFF		= 0,
+	OFDM_ALL_OFF		= 0,	
 	OFDM_ContinuousTx	= 1,
 	OFDM_SingleCarrier	= 2,
 	OFDM_SingleTone 	= 4,
@@ -672,6 +684,9 @@ typedef enum	_MPT_TXPWR_DEF{
 #elif defined(CONFIG_RTL8723B)
 	#define 	REG_RF_BB_GAIN_OFFSET	0x7f
 	#define 	RF_GAIN_OFFSET_MASK 	0xfffff
+#elif defined(CONFIG_RTL8188E)
+	#define 	REG_RF_BB_GAIN_OFFSET	0x55
+	#define 	RF_GAIN_OFFSET_MASK 	0xfffff
 #else
 	#define 	REG_RF_BB_GAIN_OFFSET	0x55
 	#define 	RF_GAIN_OFFSET_MASK 	0xfffff
@@ -733,7 +748,7 @@ extern void	SetSingleToneTx(PADAPTER pAdapter, u8 bStart);
 extern void	SetCarrierSuppressionTx(PADAPTER pAdapter, u8 bStart);
 extern void PhySetTxPowerLevel(PADAPTER pAdapter);
 
-extern void	fill_txdesc_for_mp(PADAPTER padapter, struct tx_desc *ptxdesc);
+extern void	fill_txdesc_for_mp(PADAPTER padapter, u8 *ptxdesc);
 extern void	SetPacketTx(PADAPTER padapter);
 extern void	SetPacketRx(PADAPTER pAdapter, u8 bStartRx);
 
@@ -774,7 +789,7 @@ extern u8 Hal_ReadRFThermalMeter(PADAPTER pAdapter);
 extern void Hal_SetCCKContinuousTx(PADAPTER pAdapter, u8 bStart);
 extern void Hal_SetOFDMContinuousTx(PADAPTER pAdapter, u8 bStart);
 extern void Hal_ProSetCrystalCap (PADAPTER pAdapter , u32 CrystalCapVal);
-extern void _rtw_mp_xmit_priv(struct xmit_priv *pxmitpriv);
+//extern void _rtw_mp_xmit_priv(struct xmit_priv *pxmitpriv);
 extern void MP_PHY_SetRFPathSwitch(PADAPTER pAdapter ,BOOLEAN bMain);
 extern ULONG mpt_ProQueryCalTxPower(PADAPTER	pAdapter,u8 RfPath);
 extern void MPT_PwrCtlDM(PADAPTER padapter, u32 bstart);

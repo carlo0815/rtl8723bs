@@ -1,7 +1,7 @@
 /******************************************************************************
  *
  * Copyright(c) 2007 - 2011 Realtek Corporation. All rights reserved.
- *
+ *                                        
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of version 2 of the GNU General Public License as
  * published by the Free Software Foundation.
@@ -190,8 +190,8 @@ enum NETWORK_TYPE
 	WIRELESS_11A = BIT(2), // tx: ofdm only, rx: ofdm only, hw: ofdm only
 	WIRELESS_11_24N = BIT(3), // tx: MCS only, rx: MCS & cck, hw: MCS & cck
 	WIRELESS_11_5N = BIT(4), // tx: MCS only, rx: MCS & ofdm, hw: ofdm only
-	WIRELESS_AUTO = BIT(5),
-	WIRELESS_11AC = BIT(6),
+	WIRELESS_AUTO = BIT(5), 
+	WIRELESS_11AC = BIT(6), 
 
 	//Combination
 	//Type for current wireless mode
@@ -229,9 +229,9 @@ enum NETWORK_TYPE
 
 #define IsSupportedTxCCK(NetType) ((NetType) & (WIRELESS_11B) ? _TRUE : _FALSE)
 #define IsSupportedTxOFDM(NetType) ((NetType) & (WIRELESS_11G|WIRELESS_11A) ? _TRUE : _FALSE)
-#define IsSupportedHT(NetType) ((NetType) & (WIRELESS_11_24N|WIRELESS_11_5N) ? _TRUE : _FALSE)
+#define IsSupportedHT(NetType) ((NetType) & (WIRELESS_11_24N|WIRELESS_11_5N) ? _TRUE : _FALSE) 
 
-#define IsSupportedVHT(NetType) ((NetType) & (WIRELESS_11AC) ? _TRUE : _FALSE)
+#define IsSupportedVHT(NetType) ((NetType) & (WIRELESS_11AC) ? _TRUE : _FALSE) 
 
 
 typedef struct ieee_param {
@@ -249,7 +249,7 @@ typedef struct ieee_param {
 		} wpa_ie;
 	        struct{
 			int command;
-			int reason_code;
+    			int reason_code;
 		} mlme;
 		struct {
 			u8 alg[IEEE_CRYPT_ALG_NAME_LEN];
@@ -265,7 +265,7 @@ typedef struct ieee_param {
 			u16 aid;
 			u16 capability;
 			int flags;
-			u8 tx_supp_rates[16];
+			u8 tx_supp_rates[16];		
 			struct rtw_ieee80211_ht_cap ht_cap;
 		} add_sta;
 		struct {
@@ -274,7 +274,7 @@ typedef struct ieee_param {
 		} bcn_ie;
 #endif
 
-	} u;
+	} u;	   
 }ieee_param;
 
 #ifdef CONFIG_AP_MODE
@@ -289,7 +289,7 @@ struct sta_data{
 	u16 capability;
 	int flags;
 	u32 sta_set;
-	u8 tx_supp_rates[16];
+	u8 tx_supp_rates[16];	
 	u32 tx_supp_rates_len;
 	struct rtw_ieee80211_ht_cap ht_cap;
 	u64	rx_pkts;
@@ -336,7 +336,7 @@ struct ieee_ibss_seq {
 	_list	list;
 };
 
-#if defined(PLATFORM_LINUX) || defined(CONFIG_RTL8711FW)||defined(PLATFORM_FREEBSD)
+#if defined(PLATFORM_LINUX) || defined(CONFIG_RTL8711FW)||defined(PLATFORM_FREEBSD) 
 
 struct rtw_ieee80211_hdr {
 	u16 frame_ctl;
@@ -627,6 +627,7 @@ struct ieee80211_snap_hdr {
 #define WLAN_REASON_CLASS3_FRAME_FROM_NONASSOC_STA 7
 #define WLAN_REASON_DISASSOC_STA_HAS_LEFT 8
 #define WLAN_REASON_STA_REQ_ASSOC_WITHOUT_AUTH 9
+#define WLAN_REASON_ACTIVE_ROAM 65533
 #define WLAN_REASON_JOIN_WRONG_CHANNEL       65534
 #define WLAN_REASON_EXPIRATION_CHK 65535
 
@@ -1227,9 +1228,9 @@ struct ieee80211_network {
 	u8 rates_len;
 	u8 rates_ex[MAX_RATES_EX_LENGTH];
 	u8 rates_ex_len;
-
+	
 	u8 edca_parmsets[18];
-
+		
 	u8 mode;
 	u8 flags;
 	u8 time_stamp[8];
@@ -1248,7 +1249,7 @@ struct ieee80211_network {
 	u8 qbssload[5];
 	u8 network_type;
 	int join_res;
-	unsigned long	last_scanned;
+	unsigned long	last_scanned;	
 };
 #endif
 /*
@@ -1264,7 +1265,7 @@ enum ieee80211_state {
 
 	/* the card is not linked at all */
 	IEEE80211_NOLINK = 0,
-
+	
 	/* IEEE80211_ASSOCIATING* are for BSS client mode
 	 * the driver shall not perform RX filtering unless
 	 * the state is LINKED.
@@ -1272,31 +1273,31 @@ enum ieee80211_state {
 	 * defaults to NOLINK for ALL the other states (including
 	 * LINKED_SCANNING)
 	 */
-
+	
 	/* the association procedure will start (wq scheduling)*/
 	IEEE80211_ASSOCIATING,
 	IEEE80211_ASSOCIATING_RETRY,
-
+	
 	/* the association procedure is sending AUTH request*/
 	IEEE80211_ASSOCIATING_AUTHENTICATING,
-
+	
 	/* the association procedure has successfully authentcated
 	 * and is sending association request
 	 */
 	IEEE80211_ASSOCIATING_AUTHENTICATED,
-
+	
 	/* the link is ok. the card associated to a BSS or linked
 	 * to a ibss cell or acting as an AP and creating the bss
 	 */
 	IEEE80211_LINKED,
-
+	
 	/* same as LINKED, but the driver shall apply RX filter
 	 * rules as we are in NO_LINK mode. As the card is still
 	 * logically linked, but it is doing a syncro site survey
 	 * then it will be back to LINKED state.
 	 */
 	IEEE80211_LINKED_SCANNING,
-
+	
 };
 #endif //PLATFORM_FREEBSD
 
@@ -1443,15 +1444,14 @@ enum rtw_ieee80211_back_actioncode {
 
 /* HT features action code */
 enum rtw_ieee80211_ht_actioncode {
-	RTW_WLAN_ACTION_NOTIFY_CH_WIDTH = 0,
-       RTW_WLAN_ACTION_SM_PS = 1,
-       RTW_WLAN_ACTION_PSPM = 2,
-       RTW_WLAN_ACTION_PCO_PHASE = 3,
-       RTW_WLAN_ACTION_MIMO_CSI_MX = 4,
-       RTW_WLAN_ACTION_MIMO_NONCP_BF = 5,
-       RTW_WLAN_ACTION_MIMP_CP_BF = 6,
-       RTW_WLAN_ACTION_ASEL_INDICATES_FB = 7,
-       RTW_WLAN_ACTION_HI_INFO_EXCHG = 8,
+	RTW_WLAN_ACTION_HT_NOTI_CHNL_WIDTH = 0,
+       RTW_WLAN_ACTION_HT_SM_PS = 1,
+       RTW_WLAN_ACTION_HT_PSMP = 2,
+       RTW_WLAN_ACTION_HT_SET_PCO_PHASE = 3,
+       RTW_WLAN_ACTION_HT_CSI = 4,
+       RTW_WLAN_ACTION_HT_NON_COMPRESS_BEAMFORMING = 5,
+       RTW_WLAN_ACTION_HT_COMPRESS_BEAMFORMING = 6,
+       RTW_WLAN_ACTION_HT_ASEL_FEEDBACK = 7,
 };
 
 /* BACK (block-ack) parties */
@@ -1459,6 +1459,13 @@ enum rtw_ieee80211_back_parties {
 	RTW_WLAN_BACK_RECIPIENT = 0,
 	RTW_WLAN_BACK_INITIATOR = 1,
 	RTW_WLAN_BACK_TIMER = 2,
+};
+
+/* VHT features action code */
+enum rtw_ieee80211_vht_actioncode{
+	RTW_WLAN_ACTION_VHT_COMPRESSED_BEAMFORMING = 0,
+       RTW_WLAN_ACTION_VHT_GROUPID_MANAGEMENT = 1,
+       RTW_WLAN_ACTION_VHT_OPMODE_NOTIFICATION = 2,
 };
 
 
@@ -1512,7 +1519,7 @@ enum rtw_ieee80211_back_parties {
           RTW_IEEE80211_CHAN_NO_HT40PLUS      = 1<<4,
           RTW_IEEE80211_CHAN_NO_HT40MINUS     = 1<<5,
   };
-
+  
   #define RTW_IEEE80211_CHAN_NO_HT40 \
           (RTW_IEEE80211_CHAN_NO_HT40PLUS | RTW_IEEE80211_CHAN_NO_HT40MINUS)
 
@@ -1529,7 +1536,7 @@ struct rtw_ieee80211_channel {
 	//u32 orig_flags;
 	//int orig_mag;
 	//int orig_mpwr;
-};
+}; 
 
 #define CHAN_FMT \
 	/*"band:%d, "*/ \
@@ -1542,7 +1549,7 @@ struct rtw_ieee80211_channel {
 	/*"beacon_found:%u\n"*/ \
 	/*"orig_flags:0x%08x\n"*/ \
 	/*"orig_mag:%d\n"*/ \
-	/*"orig_mpwr:%d\n"*/
+	/*"orig_mpwr:%d\n"*/ 
 
 #define CHAN_ARG(channel) \
 	/*(channel)->band*/ \
@@ -1650,6 +1657,7 @@ int rtw_parse_wpa2_ie(u8* wpa_ie, int wpa_ie_len, int *group_cipher, int *pairwi
 int rtw_get_sec_ie(u8 *in_ie,uint in_len,u8 *rsn_ie,u16 *rsn_len,u8 *wpa_ie,u16 *wpa_len);
 
 u8 rtw_is_wps_ie(u8 *ie_ptr, uint *wps_ielen);
+u8 *rtw_get_wps_ie_from_scan_queue(u8 *in_ie, uint in_len, u8 *wps_ie, uint *wps_ielen, u8 frame_type);
 u8 *rtw_get_wps_ie(u8 *in_ie, uint in_len, u8 *wps_ie, uint *wps_ielen);
 u8 *rtw_get_wps_attr(u8 *wps_ie, uint wps_ielen, u16 target_attr_id ,u8 *buf_attr, u32 *len_attr);
 u8 *rtw_get_wps_attr_content(u8 *wps_ie, uint wps_ielen, u16 target_attr_id ,u8 *buf_content, uint *len_content);
@@ -1671,6 +1679,7 @@ u32 rtw_get_p2p_merged_ies_len(u8 *in_ie, u32 in_len);
 int rtw_p2p_merge_ies(u8 *in_ie, u32 in_len, u8 *merge_ie);
 void dump_p2p_ie(u8 *ie, u32 ie_len);
 u8 *rtw_get_p2p_ie(u8 *in_ie, int in_len, u8 *p2p_ie, uint *p2p_ielen);
+u8 *rtw_get_p2p_ie_from_scan_queue(u8 *in_ie, int in_len, u8 *p2p_ie, uint *p2p_ielen, u8 frame_type);
 u8 *rtw_get_p2p_attr(u8 *p2p_ie, uint p2p_ielen, u8 target_attr_id ,u8 *buf_attr, u32 *len_attr);
 u8 *rtw_get_p2p_attr_content(u8 *p2p_ie, uint p2p_ielen, u8 target_attr_id ,u8 *buf_content, uint *len_content);
 u32 rtw_set_p2p_attr_content(u8 *pbuf, u8 attr_id, u16 attr_len, u8 *pdata_attr);
@@ -1680,6 +1689,7 @@ void rtw_WLAN_BSSID_EX_remove_p2p_attr(WLAN_BSSID_EX *bss_ex, u8 attr_id);
 #ifdef CONFIG_WFD
 void dump_wfd_ie(u8 *ie, u32 ie_len);
 int rtw_get_wfd_ie(u8 *in_ie, int in_len, u8 *wfd_ie, uint *wfd_ielen);
+int rtw_get_wfd_ie_from_scan_queue(u8 *in_ie, int in_len, u8 *p2p_ie, uint *p2p_ielen, u8 frame_type);
 int rtw_get_wfd_attr_content(u8 *wfd_ie, uint wfd_ielen, u8 target_attr_id ,u8 *attr_content, uint *attr_contentlen);
 #endif // CONFIG_WFD
 
@@ -1701,9 +1711,10 @@ void rtw_get_bcn_info(struct wlan_network *pnetwork);
 
 void rtw_macaddr_cfg(u8 *mac_addr);
 
-u16 rtw_mcs_rate(u8 rf_type, u8 bw_40MHz, u8 short_GI_20, u8 short_GI_40, unsigned char * MCS_rate);
+u16 rtw_mcs_rate(u8 rf_type, u8 bw_40MHz, u8 short_GI, unsigned char * MCS_rate);
 
 int rtw_action_frame_parse(const u8 *frame, u32 frame_len, u8* category, u8 *action);
 const char *action_public_str(u8 action);
 
 #endif /* IEEE80211_H */
+

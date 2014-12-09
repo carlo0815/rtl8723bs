@@ -53,12 +53,7 @@
 #define CONFIG_80211N_HT
 #define CONFIG_RECV_REORDERING_CTRL
 
-#define CONFIG_IOCTL_CFG80211
-#ifdef CONFIG_PLATFORM_ARM_SUN4I
-	#ifndef CONFIG_IOCTL_CFG80211
-		#define CONFIG_IOCTL_CFG80211 1
-	#endif
-#endif
+//#define CONFIG_IOCTL_CFG80211
 
 #if defined(CONFIG_PLATFORM_SPRD) && !defined(ANDROID_2X)
 	#ifndef CONFIG_IOCTL_CFG80211
@@ -87,6 +82,7 @@
 	#endif
 	//#define CONFIG_FIND_BEST_CHANNEL
 	//#define CONFIG_NO_WIRELESS_HANDLERS
+	#define CONFIG_TX_MCAST2UNI		// Support IP multicast->unicast
 #endif
 
 #define CONFIG_P2P
@@ -100,23 +96,30 @@
 	#endif
 	//#define CONFIG_DBG_P2P
 	#define CONFIG_P2P_PS
-	#define CONFIG_P2P_IPS
+	//#define CONFIG_P2P_IPS
 	#define CONFIG_P2P_OP_CHK_SOCIAL_CH
-	#define CONFIG_P2P_CHK_INVITE_CH_LIST
+	#define CONFIG_CFG80211_ONECHANNEL_UNDER_CONCURRENT  //replace CONFIG_P2P_CHK_INVITE_CH_LIST flag
+	#define CONFIG_P2P_INVITE_IOT
 #endif
 
 //	Added by Kurt 20110511
 //#define CONFIG_TDLS
 #ifdef CONFIG_TDLS
 //	#ifndef CONFIG_WFD
-//		#define CONFIG_WFD
+//		#define CONFIG_WFD	
 //	#endif
-//	#define CONFIG_TDLS_AUTOSETUP
-//	#define CONFIG_TDLS_AUTOCHECKALIVE
+//	#define CONFIG_TDLS_AUTOSETUP			
+//	#define CONFIG_TDLS_AUTOCHECKALIVE		
 #endif
 
 #define CONFIG_LAYER2_ROAMING
 #define CONFIG_LAYER2_ROAMING_RESUME
+
+//#define CONFIG_SCAN_SPARSE 	//partial scan, ASUS RK3188 use the feature
+#ifdef CONFIG_SCAN_SPARSE 
+	#define ALLOW_SCAN_INTERVAL	12000 // unit is ms
+	#define SCAN_DIVISION_NUM 4
+#endif 	
 
 //#define CONFIG_80211D
 
@@ -134,8 +137,10 @@
 /*
  * Interface Related Config
  */
+#define CONFIG_TX_AGGREGATION
 #define CONFIG_SDIO_RX_COPY
 #define CONFIG_XMIT_THREAD_MODE
+#define CONFIG_SDIO_TX_ENABLE_AVAL_INT
 
 /*
  * Others
@@ -163,13 +168,13 @@
 #endif
 
 
-#define CONFIG_CONCURRENT_MODE
+//#define CONFIG_CONCURRENT_MODE
 #ifdef CONFIG_CONCURRENT_MODE
 	#define CONFIG_TSF_RESET_OFFLOAD 1			// For 2 PORT TSF SYNC.
 	//#define CONFIG_HWPORT_SWAP				//Port0->Sec , Port1 -> Pri
 	#define CONFIG_RUNTIME_PORT_SWITCH
 	//#define DBG_RUNTIME_PORT_SWITCH
-	//#define CONFIG_STA_MODE_SCAN_UNDER_AP_MODE
+	#define CONFIG_STA_MODE_SCAN_UNDER_AP_MODE
 #endif	// CONFIG_CONCURRENT_MODE
 
 
@@ -213,7 +218,7 @@
 	//#define CONFIG_SWLPS_IN_IPS // Do SW LPS flow when entering and leaving IPS
 	#define CONFIG_FWLPS_IN_IPS // issue H2C command to let FW do LPS when entering IPS
 	#endif
-
+	
 #endif // #ifdef CONFIG_POWER_SAVING
 
 #ifdef CONFIG_BT_COEXIST
@@ -259,6 +264,8 @@
  * Outsource  Related Config
  */
 
+#define 	TESTCHIP_SUPPORT				0
+
 #define 	RTL8192CE_SUPPORT 				0
 #define 	RTL8192CU_SUPPORT 			0
 #define 	RTL8192C_SUPPORT 				(RTL8192CE_SUPPORT|RTL8192CU_SUPPORT)
@@ -272,33 +279,18 @@
 #define 	RTL8723AU_SUPPORT				0
 #define 	RTL8723AE_SUPPORT				0
 #define 	RTL8723A_SUPPORT				(RTL8723AU_SUPPORT|RTL8723AS_SUPPORT|RTL8723AE_SUPPORT)
-
-
 #define 	RTL8723_FPGA_VERIFICATION		0
 
-#define RTL8188EE_SUPPORT				0
-#define RTL8188EU_SUPPORT				0
-#define RTL8188ES_SUPPORT				0
-#define RTL8188E_SUPPORT				(RTL8188EE_SUPPORT|RTL8188EU_SUPPORT|RTL8188ES_SUPPORT)
-
-#define RTL8812E_SUPPORT				0
-#define RTL8812AU_SUPPORT				0
-#define RTL8812A_SUPPORT				(RTL8812E_SUPPORT|RTL8812AU_SUPPORT)
-
+#define RTL8188E_SUPPORT				0
+#define RTL8812A_SUPPORT				0
 #define RTL8821A_SUPPORT				0
-
 #define RTL8723B_SUPPORT				1
-
 #define RTL8192E_SUPPORT				0
+#define RTL8814A_SUPPORT				0
 
-#define RTL8813A_SUPPORT				0
-
-#define TESTCHIP_SUPPORT			0
-
-//#if (RTL8188E_SUPPORT==1)
 #define RATE_ADAPTIVE_SUPPORT 			0
 #define POWER_TRAINING_ACTIVE			0
-//#endif
+
 
 //#define CONFIG_HW_ANTENNA_DIVERSITY
 
@@ -306,7 +298,7 @@
  * Platform dependent
  */
 #ifdef CONFIG_PLATFORM_SPRD
-
+ 
 #undef CONFIG_SDIO_RX_COPY
 
 #ifdef ANDROID_2X

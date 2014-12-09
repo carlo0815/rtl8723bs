@@ -26,7 +26,6 @@
 //
 //
 //============================================================
-#define DYNAMIC_FUNC_BT BIT(0)
 
 //============================================================
 // structure and define
@@ -46,3 +45,4 @@ void rtl8723b_hal_dm_in_lps(PADAPTER padapter);
 
 
 #endif
+

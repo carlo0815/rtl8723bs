@@ -45,14 +45,14 @@ static void update_recvframe_attrib(
 	struct rx_pkt_attrib	*pattrib;
 	struct recv_stat	report;
 	PRXREPORT prxreport = (PRXREPORT)&report;
-
+	
 	report.rxdw0 = le32_to_cpu(prxstat->rxdw0);
 	report.rxdw1 = le32_to_cpu(prxstat->rxdw1);
 	report.rxdw2 = le32_to_cpu(prxstat->rxdw2);
 	report.rxdw3 = le32_to_cpu(prxstat->rxdw3);
 	report.rxdw4 = le32_to_cpu(prxstat->rxdw4);
 	report.rxdw5 = le32_to_cpu(prxstat->rxdw5);
-
+	
 	pattrib = &precvframe->u.hdr.attrib;
 	_rtw_memset(pattrib, 0, sizeof(struct rx_pkt_attrib));
 
@@ -124,10 +124,10 @@ void update_recvframe_phyinfo(
 		!pattrib->icv_err && !pattrib->crc_err &&
 		_rtw_memcmp(get_hdr_bssid(wlanhdr), get_bssid(&padapter->mlmepriv), ETH_ALEN));
 
-	pkt_info.bPacketToSelf = pkt_info.bPacketMatchBSSID && (_rtw_memcmp(get_da(wlanhdr), myid(&padapter->eeprompriv), ETH_ALEN));
+	pkt_info.bPacketToSelf = pkt_info.bPacketMatchBSSID && (_rtw_memcmp(get_ra(wlanhdr), myid(&padapter->eeprompriv), ETH_ALEN));
 
 	pkt_info.bPacketBeacon = pkt_info.bPacketMatchBSSID && (GetFrameSubType(wlanhdr) == WIFI_BEACON);
-
+/*
 	if(pkt_info.bPacketBeacon){
 		if(check_fwstate(&padapter->mlmepriv, WIFI_STATION_STATE) == _TRUE){
 			sa = padapter->mlmepriv.cur_network.network.MacAddress;
@@ -143,6 +143,8 @@ void update_recvframe_phyinfo(
 	else{
 		sa = get_sa(wlanhdr);
 	}
+*/
+	sa = get_ta(wlanhdr);
 
 	pkt_info.StationID = 0xFF;
 
@@ -150,7 +152,7 @@ void update_recvframe_phyinfo(
 	psta = rtw_get_stainfo(pstapriv, sa);
 	if (psta)
 	{
-		pkt_info.StationID = psta->mac_id;
+      		pkt_info.StationID = psta->mac_id;
 		//DBG_8192C("%s ==> StationID(%d)\n",__FUNCTION__,pkt_info.StationID);
 	}
 	pkt_info.DataRate = pattrib->data_rate;
@@ -158,6 +160,7 @@ void update_recvframe_phyinfo(
 	//rtl8723b_query_rx_phy_status(precvframe, pphy_status);
 	//_enter_critical_bh(&pHalData->odm_stainfo_lock, &irqL);
 	ODM_PhyStatusQuery(&pHalData->odmpriv,pPHYInfo,(u8 *)pphy_status,&(pkt_info));
+	if(psta) psta->rssi = pattrib->phy_info.RecvSignalPower;
 	//_exit_critical_bh(&pHalData->odm_stainfo_lock, &irqL);
 	precvframe->u.hdr.psta = NULL;
 	if (pkt_info.bPacketMatchBSSID &&
@@ -293,8 +296,8 @@ static void rtl8723bs_c2h_packet_handler(PADAPTER padapter, u8 *pbuf, u16 length
 
 	if(length == 0)
 		return;
-
-	DBG_871X("+%s() length=%d\n", __func__, length);
+	
+	//DBG_871X("+%s() length=%d\n", __func__, length);
 
 	tmpBuf = rtw_zmalloc(length);
 	if (tmpBuf == NULL)
@@ -307,7 +310,7 @@ static void rtl8723bs_c2h_packet_handler(PADAPTER padapter, u8 *pbuf, u16 length
 	if (res == _FALSE && tmpBuf != NULL)
 			rtw_mfree(tmpBuf, length);
 
-	DBG_871X("-%s res(%d)\n", __func__, res);
+	//DBG_871X("-%s res(%d)\n", __func__, res);
 
 	return;
 }
@@ -392,8 +395,11 @@ static void rtl8723bs_recv_tasklet(void *priv)
 							padapter->mppriv.rx_crcerrpktcount++;
 					}
 				}
+				else
 #endif
-				DBG_8192C("%s: crc_err=%d icv_err=%d, skip!\n", __FUNCTION__, pattrib->crc_err, pattrib->icv_err);
+				{
+					DBG_8192C("%s: crc_err=%d icv_err=%d, skip!\n", __FUNCTION__, pattrib->crc_err, pattrib->icv_err);
+				}
 				rtw_free_recvframe(precvframe, &precvpriv->free_recv_queue);
 			}
 			else
@@ -512,10 +518,10 @@ static void rtl8723bs_recv_tasklet(void *priv)
 				else if(pattrib->pkt_rpt_type == C2H_PACKET)
 				{
 					C2H_EVT_HDR 	C2hEvent;
-
+					
 					u16 len_c2h = pattrib->pkt_len;
 					u8 *pbuf_c2h = precvframe->u.hdr.rx_data;
-					u8 *pdata_c2h;
+					u8 *pdata_c2h;				
 
 					C2hEvent.CmdID = pbuf_c2h[0];
 					C2hEvent.CmdSeq = pbuf_c2h[1];
@@ -530,11 +536,11 @@ static void rtl8723bs_recv_tasklet(void *priv)
 					{
 						rtl8723bs_c2h_packet_handler(padapter, precvframe->u.hdr.rx_data, pattrib->pkt_len);
 					}
-
+					
 					rtw_free_recvframe(precvframe, &precvpriv->free_recv_queue);
-
+					
 				}
-#endif
+#endif				
 			}
 
 			pkt_offset = _RND8(pkt_offset);
@@ -606,7 +612,7 @@ static void rtl8723bs_recv_tasklet(void *priv)
 						DBG_871X("%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:\n", *(pptr+i),
 						*(pptr+i+1), *(pptr+i+2) ,*(pptr+i+3) ,*(pptr+i+4),*(pptr+i+5), *(pptr+i+6), *(pptr+i+7), *(pptr+i+8), *(pptr+i+9), *(pptr+i+10),
 						 *(pptr+i+11), *(pptr+i+12), *(pptr+i+13), *(pptr+i+14), *(pptr+i+15));
-
+					
 					if(pattrib->pkt_len < 100)
 						len = pattrib->pkt_len;
 					pptr = ptr + RXDESC_SIZE + pattrib->drvinfo_sz;
@@ -650,8 +656,11 @@ static void rtl8723bs_recv_tasklet(void *priv)
 							padapter->mppriv.rx_crcerrpktcount++;
 					}
 				}
+				else
 #endif
-				DBG_8192C("%s: crc_err=%d icv_err=%d, skip!\n", __FUNCTION__, pattrib->crc_err, pattrib->icv_err);
+				{
+					DBG_8192C("%s: crc_err=%d icv_err=%d, skip!\n", __FUNCTION__, pattrib->crc_err, pattrib->icv_err);
+				}
 				rtw_free_recvframe(precvframe, &precvpriv->free_recv_queue);
 			}
 			else
@@ -722,7 +731,7 @@ static void rtl8723bs_recv_tasklet(void *priv)
 					rtl8723bs_c2h_packet_handler(padapter, precvframe->u.hdr.rx_data, pattrib->pkt_len);
 					rtw_free_recvframe(precvframe, &precvpriv->free_recv_queue);
 				}
-#endif
+#endif				
 			}
 
 			pkt_offset = _RND8(pkt_offset);
@@ -888,3 +897,4 @@ void rtl8723bs_free_recv_priv(PADAPTER padapter)
 		precvpriv->pallocated_recv_buf = NULL;
 	}
 }
+

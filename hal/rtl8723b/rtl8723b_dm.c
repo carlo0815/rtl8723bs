@@ -83,7 +83,7 @@ dm_CheckStatistics(
 	rtw_hal_get_hwreg( Adapter, HW_VAR_RETRY_COUNT, (pu1Byte)(&Adapter->TxStats.NumTxRetryCount) );
 #endif
 }
-
+#ifdef CONFIG_SUPPORT_HW_WPS_PBC
 static void dm_CheckPbcGPIO(_adapter *padapter)
 {
 	u8	tmp1byte;
@@ -131,26 +131,11 @@ static void dm_CheckPbcGPIO(_adapter *padapter)
 		// Here we only set bPbcPressed to true
 		// After trigger PBC, the variable will be set to false
 		DBG_8192C("CheckPbcGPIO - PBC is pressed\n");
-
-#ifdef RTK_DMP_PLATFORM
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,12))
-		kobject_uevent(&padapter->pnetdev->dev.kobj, KOBJ_NET_PBC);
-#else
-		kobject_hotplug(&padapter->pnetdev->class_dev.kobj, KOBJ_NET_PBC);
-#endif
-#else
-
-		if ( padapter->pid[0] == 0 )
-		{	//	0 is the default value and it means the application monitors the HW PBC doesn't privde its pid to driver.
-			return;
-		}
-
-#ifdef PLATFORM_LINUX
-		rtw_signal_process(padapter->pid[0], SIGUSR1);
-#endif
-#endif
+		rtw_request_wps_pbc_event(padapter);
 	}
 }
+#endif //#ifdef CONFIG_SUPPORT_HW_WPS_PBC
+
 
 #ifdef CONFIG_PCI_HCI
 //
@@ -268,12 +253,12 @@ static void Init_ODM_ComInfo_8723b(PADAPTER	Adapter)
 	//
 	// Init Value
 	//
-	_rtw_memset(pDM_Odm,0,sizeof(pDM_Odm));
+	_rtw_memset(pDM_Odm,0,sizeof(*pDM_Odm));
 
 	pDM_Odm->Adapter = Adapter;
 	ODM_CmnInfoInit(pDM_Odm,ODM_CMNINFO_PLATFORM,ODM_CE);
 	ODM_CmnInfoInit(pDM_Odm,ODM_CMNINFO_INTERFACE,Adapter->interface_type);//RTL871X_HCI_TYPE
-
+	ODM_CmnInfoInit(pDM_Odm, ODM_CMNINFO_PACKAGE_TYPE, pHalData->PackageType);
 	ODM_CmnInfoInit(pDM_Odm,ODM_CMNINFO_IC_TYPE, ODM_RTL8723B);
 
 	fab_ver = ODM_TSMC;
@@ -312,10 +297,10 @@ static void Init_ODM_ComInfo_8723b(PADAPTER	Adapter)
 	#else
 	pdmpriv->InitODMFlag =	ODM_RF_CALIBRATION		|
 							ODM_RF_TX_PWR_TRACK	//|
-							;
+							;	
 	//if(pHalData->AntDivCfg)
 	//	pdmpriv->InitODMFlag |= ODM_BB_ANT_DIV;
-	#endif
+	#endif	
 
 	ODM_CmnInfoUpdate(pDM_Odm,ODM_CMNINFO_ABILITY,pdmpriv->InitODMFlag);
 }
@@ -324,6 +309,7 @@ static void Update_ODM_ComInfo_8723b(PADAPTER	Adapter)
 {
 	struct mlme_ext_priv	*pmlmeext = &Adapter->mlmeextpriv;
 	struct mlme_priv		*pmlmepriv = &Adapter->mlmepriv;
+	struct dvobj_priv *dvobj = adapter_to_dvobj(Adapter);
 	struct pwrctrl_priv *pwrctrlpriv = adapter_to_pwrctl(Adapter);
 	PHAL_DATA_TYPE	pHalData = GET_HAL_DATA(Adapter);
 	PDM_ODM_T		pDM_Odm = &(pHalData->odmpriv);
@@ -338,6 +324,7 @@ static void Update_ODM_ComInfo_8723b(PADAPTER	Adapter)
 		| ODM_BB_RSSI_MONITOR
 		| ODM_BB_CCK_PD
 		| ODM_BB_PWR_SAVE
+		| ODM_BB_CFO_TRACKING
 		| ODM_MAC_EDCA_TURBO
 		| ODM_RF_TX_PWR_TRACK
 		| ODM_RF_CALIBRATION
@@ -372,8 +359,8 @@ static void Update_ODM_ComInfo_8723b(PADAPTER	Adapter)
 
 	ODM_CmnInfoUpdate(pDM_Odm,ODM_CMNINFO_ABILITY,pdmpriv->InitODMFlag);
 
-	ODM_CmnInfoHook(pDM_Odm,ODM_CMNINFO_TX_UNI,&(Adapter->xmitpriv.tx_bytes));
-	ODM_CmnInfoHook(pDM_Odm,ODM_CMNINFO_RX_UNI,&(Adapter->recvpriv.rx_bytes));
+	ODM_CmnInfoHook(pDM_Odm,ODM_CMNINFO_TX_UNI,&(dvobj->traffic_stat.tx_bytes));
+	ODM_CmnInfoHook(pDM_Odm,ODM_CMNINFO_RX_UNI,&(dvobj->traffic_stat.rx_bytes));
 	ODM_CmnInfoHook(pDM_Odm,ODM_CMNINFO_WM_MODE,&(pmlmeext->cur_wireless_mode));
 	ODM_CmnInfoHook(pDM_Odm,ODM_CMNINFO_SEC_CHNL_OFFSET,&(pHalData->nCur40MhzPrimeSC));
 	ODM_CmnInfoHook(pDM_Odm,ODM_CMNINFO_SEC_MODE,&(Adapter->securitypriv.dot11PrivacyAlgrthm));
@@ -396,7 +383,7 @@ static void Update_ODM_ComInfo_8723b(PADAPTER	Adapter)
 	ODM_CmnInfoHook(pDM_Odm,ODM_CMNINFO_BT_DISABLE_EDCA,&(pDM_Odm->u1Byte_temp));
 	*/
 	ODM_CmnInfoHook(pDM_Odm,ODM_CMNINFO_FORCED_RATE,&(pHalData->ForcedDataRate));
-
+	
 	ODM_CmnInfoHook(pDM_Odm,ODM_CMNINFO_SCAN,&(pmlmepriv->bScanInProcess));
 	ODM_CmnInfoHook(pDM_Odm,ODM_CMNINFO_POWER_SAVING,&(pwrctrlpriv->bpower_saving));
 
@@ -432,7 +419,9 @@ rtl8723b_InitHalDm(
 	pdmpriv->InitDMFlag = pdmpriv->DMFlag;
 
 	Update_ODM_ComInfo_8723b(Adapter);
-	ODM_DMInit(pDM_Odm);
+	
+	if (Adapter->registrypriv.mp_mode == 0)
+		ODM_DMInit(pDM_Odm);
 
 }
 
@@ -457,7 +446,7 @@ IN	PADAPTER	pAdapter
 
 		if((pdmpriv->EntryMinUndecoratedSmoothedPWDB != 0) &&
                   (pbuddy_dmpriv->EntryMinUndecoratedSmoothedPWDB != 0))
-		{
+      		{
 
 			if(pdmpriv->EntryMinUndecoratedSmoothedPWDB > pbuddy_dmpriv->EntryMinUndecoratedSmoothedPWDB)
 				pdmpriv->EntryMinUndecoratedSmoothedPWDB = pbuddy_dmpriv->EntryMinUndecoratedSmoothedPWDB;
@@ -468,7 +457,7 @@ IN	PADAPTER	pAdapter
 			      pdmpriv->EntryMinUndecoratedSmoothedPWDB = pbuddy_dmpriv->EntryMinUndecoratedSmoothedPWDB;
 
 		}
-		#if 0
+ 		#if 0
 		if((pdmpriv->UndecoratedSmoothedPWDB != (-1)) &&
 			 (pbuddy_dmpriv->UndecoratedSmoothedPWDB != (-1)))
 		{
@@ -566,7 +555,7 @@ if (Adapter->registrypriv.mp_mode == 1 && Adapter->mppriv.mp_dm ==0) // for MP p
 		// Calculate Tx/Rx statistics.
 		//
 		dm_CheckStatistics(Adapter);
-
+		rtw_hal_check_rxfifo_full(Adapter);
 		//
 		// Dynamically switch RTS/CTS protection.
 		//
@@ -587,26 +576,32 @@ if (Adapter->registrypriv.mp_mode == 1 && Adapter->mppriv.mp_dm ==0) // for MP p
 	{
 		u8	bLinked=_FALSE;
 		u8	bsta_state=_FALSE;
-		if(rtw_linked_check(Adapter))
-			bLinked = _TRUE;
+		u8	bBtDisabled = _TRUE;
 
-#ifdef CONFIG_CONCURRENT_MODE
-		if (pbuddy_adapter && rtw_linked_check(pbuddy_adapter))
+		if(rtw_linked_check(Adapter)){			
 			bLinked = _TRUE;
+			if (check_fwstate(&Adapter->mlmepriv, WIFI_STATION_STATE))
+				bsta_state = _TRUE;
+		}
+			
+#ifdef CONFIG_CONCURRENT_MODE
+		if(pbuddy_adapter && rtw_linked_check(pbuddy_adapter)){
+			bLinked = _TRUE;
+			if(pbuddy_adapter && check_fwstate(&pbuddy_adapter->mlmepriv, WIFI_STATION_STATE))
+				bsta_state = _TRUE;
+		}
 #endif //CONFIG_CONCURRENT_MODE
+
 		ODM_CmnInfoUpdate(&pHalData->odmpriv ,ODM_CMNINFO_LINK, bLinked);
-
-		if (check_fwstate(&Adapter->mlmepriv, WIFI_STATION_STATE))
-			bsta_state = _TRUE;
-#ifdef CONFIG_CONCURRENT_MODE
-		if(pbuddy_adapter && check_fwstate(&pbuddy_adapter->mlmepriv, WIFI_STATION_STATE))
-			bsta_state = _TRUE;
-#endif //CONFIG_CONCURRENT_MODE
 		ODM_CmnInfoUpdate(&pHalData->odmpriv ,ODM_CMNINFO_STATION_STATE, bsta_state);
 
+		//FindMinimumRSSI_8723b(Adapter);
+		//ODM_CmnInfoUpdate(&pHalData->odmpriv ,ODM_CMNINFO_RSSI_MIN, pdmpriv->MinUndecoratedPWDBForDM);
 
-		FindMinimumRSSI_8723b(Adapter);
-		ODM_CmnInfoUpdate(&pHalData->odmpriv ,ODM_CMNINFO_RSSI_MIN, pdmpriv->MinUndecoratedPWDBForDM);
+#ifdef CONFIG_BT_COEXIST
+		bBtDisabled = rtw_btcoex_IsBtDisabled(Adapter);
+#endif // CONFIG_BT_COEXIST
+		ODM_CmnInfoUpdate(&pHalData->odmpriv, ODM_CMNINFO_BT_ENABLED, ((bBtDisabled == _TRUE)?_FALSE:_TRUE));
 
 		ODM_DMWatchdog(&pHalData->odmpriv);
 	}
@@ -620,19 +615,15 @@ skip_dm:
 		//RTPRINT(FPWR, PWRHW, ("dm_CheckRfCtrlGPIO \n"));
 	//	dm_CheckRfCtrlGPIO(Adapter);
 	//}
-
-#ifdef CONFIG_PCI_HCI
-	if(pHalData->bGpioHwWpsPbc)
+#ifdef CONFIG_SUPPORT_HW_WPS_PBC
+	dm_CheckPbcGPIO(Adapter);
 #endif
-	{
-		dm_CheckPbcGPIO(Adapter);				// Add by hpfan 2008-03-11
-	}
-
+	return;
 }
 
 void rtl8723b_hal_dm_in_lps(PADAPTER padapter)
 {
-	u32	PWDB_rssi=0;
+	u32	PWDB_rssi=0;	
 	struct mlme_priv 	*pmlmepriv = &padapter->mlmepriv;
 	PHAL_DATA_TYPE	pHalData = GET_HAL_DATA(padapter);
 	PDM_ODM_T		pDM_Odm = &pHalData->odmpriv;
@@ -651,9 +642,9 @@ void rtl8723b_hal_dm_in_lps(PADAPTER padapter)
 	if(psta && (psta->rssi_stat.UndecoratedSmoothedPWDB > 0))
 	{
 		PWDB_rssi = (psta->mac_id | (psta->rssi_stat.UndecoratedSmoothedPWDB<<16) );
-
+		
 		rtl8723b_set_rssi_cmd(padapter, (u8*)&PWDB_rssi);
-	}
+	}	
 
 }
 
@@ -692,9 +683,9 @@ void rtl8723b_HalDmWatchDog_in_LPS(IN	PADAPTER	Adapter)
 		goto skip_lps_dm;
 
 
-	//ODM_DMWatchdog(&pHalData->odmpriv);
-	//Do DIG by RSSI In LPS-32K
-
+	//ODM_DMWatchdog(&pHalData->odmpriv);	
+	//Do DIG by RSSI In LPS-32K 
+	
       //.1 Find MIN-RSSI
 	psta = rtw_get_stainfo(pstapriv, get_bssid(pmlmepriv));
 	if(psta == NULL)
@@ -712,14 +703,14 @@ void rtl8723b_HalDmWatchDog_in_LPS(IN	PADAPTER	Adapter)
 	pDM_Odm->RSSI_Min = pdmpriv->MinUndecoratedPWDBForDM;
 
 	//if(pDM_DigTable->CurIGValue != pDM_Odm->RSSI_Min)
-	if((pDM_DigTable->CurIGValue > pDM_Odm->RSSI_Min + 5) ||
+	if((pDM_DigTable->CurIGValue > pDM_Odm->RSSI_Min + 5) || 
              (pDM_DigTable->CurIGValue < pDM_Odm->RSSI_Min - 5))
 
-	{
-		rtw_dm_in_lps_wk_cmd(Adapter);
+	{		
+		rtw_dm_in_lps_wk_cmd(Adapter);		
 	}
-
-
+	
+	
 skip_lps_dm:
 
 	return;
@@ -733,11 +724,7 @@ void rtl8723b_init_dm_priv(IN PADAPTER Adapter)
 	PDM_ODM_T 		podmpriv = &pHalData->odmpriv;
 	_rtw_memset(pdmpriv, 0, sizeof(struct dm_priv));
 	Init_ODM_ComInfo_8723b(Adapter);
-#ifdef CONFIG_SW_ANTENNA_DIVERSITY
-	//_init_timer(&(pdmpriv->SwAntennaSwitchTimer),  Adapter->pnetdev , odm_SW_AntennaSwitchCallback, Adapter);
 	ODM_InitAllTimers(podmpriv );
-#endif
-
 }
 
 void rtl8723b_deinit_dm_priv(IN PADAPTER Adapter)
@@ -745,8 +732,6 @@ void rtl8723b_deinit_dm_priv(IN PADAPTER Adapter)
 	PHAL_DATA_TYPE	pHalData = GET_HAL_DATA(Adapter);
 	struct dm_priv	*pdmpriv = &pHalData->dmpriv;
 	PDM_ODM_T 		podmpriv = &pHalData->odmpriv;
-#ifdef CONFIG_SW_ANTENNA_DIVERSITY
-	//_cancel_timer_ex(&pdmpriv->SwAntennaSwitchTimer);
 	ODM_CancelAllTimers(podmpriv);
-#endif
 }
+

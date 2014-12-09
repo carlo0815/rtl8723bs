@@ -21,13 +21,13 @@
 #define __RTW_PWRCTRL_H_
 
 
-#define FW_PWR0	0
+#define FW_PWR0	0	
 #define FW_PWR1 	1
 #define FW_PWR2 	2
 #define FW_PWR3 	3
 
 
-#define HW_PWR0	7
+#define HW_PWR0	7	
 #define HW_PWR1 	6
 #define HW_PWR2 	2
 #define HW_PWR3	0
@@ -107,7 +107,7 @@ struct reportpwrstate_parm {
 	unsigned char mode;
 	unsigned char state; //the CPWM value
 	unsigned short rsvd;
-};
+}; 
 
 
 typedef _sema _pwrlock;
@@ -183,7 +183,7 @@ enum _PS_BBRegBackup_ {
 enum { // for ips_mode
 	IPS_NONE=0,
 	IPS_NORMAL,
-	IPS_LEVEL_2,
+	IPS_LEVEL_2,	
 	IPS_NUM
 };
 
@@ -209,9 +209,9 @@ typedef struct pno_nlo_info
 	u32	slow_scan_period;			//slow scan period
 	u32	fast_scan_iterations;			//Fast scan iterations
 	u8	ssid_length[MAX_PNO_LIST_COUNT];	//SSID Length Array
-	u8	ssid_chiper_info[MAX_PNO_LIST_COUNT];	//Chiper information for security
+	u8	ssid_cipher_info[MAX_PNO_LIST_COUNT];	//Cipher information for security
 	u8	ssid_channel_info[MAX_PNO_LIST_COUNT];	//channel information
-}pno_nlo_info_t;
+}pno_nlo_info_t;	
 
 typedef struct pno_ssid {
 	u32		SSID_len;
@@ -280,10 +280,12 @@ struct pwrctrl_priv
 	uint 	ips_enter_cnts;
 	uint 	ips_leave_cnts;
 
-	u8	ips_mode;
+	u8	ips_mode; 
+	u8	ips_org_mode; 
 	u8	ips_mode_req; // used to accept the mode setting request, will update to ipsmode later
 	uint bips_processing;
 	u32 ips_deny_time; /* will deny IPS when system time is smaller than this */
+	u8 pre_ips_type;// 0: default flow, 1: carddisbale flow
 
 	// ps_deny: if 0, power save is free to go; otherwise deny all kinds of power save.
 	// Use PS_DENY_REASON to decide reason.
@@ -297,6 +299,7 @@ struct pwrctrl_priv
 	u8	bLeisurePs;
 	u8	LpsIdleCount;
 	u8	power_mgnt;
+	u8	org_power_mgnt;
 	u8	bFwCurrentInPSMode;
 	u32	DelayLPSLastTimeStamp;
 	s32		pnp_current_pwr_state;
@@ -309,17 +312,19 @@ struct pwrctrl_priv
 	u8		bAutoResume;
 	u8		autopm_cnt;
 #endif
-	u8		bSupportRemoteWakeup;
-#ifdef CONFIG_WOWLAN
+	u8		bSupportRemoteWakeup;	
+	u8		wowlan_wake_reason;
+	u8		wowlan_ap_mode;
 	u8		wowlan_mode;
+#ifdef CONFIG_WOWLAN
 	u8		wowlan_pattern;
 	u8		wowlan_magic;
 	u8		wowlan_unicast;
 	u8		wowlan_pattern_idx;
-	u8		wowlan_wake_reason;
 	u8		wowlan_pno_enable;
 #ifdef CONFIG_PNO_SUPPORT
 	u8		pno_in_resume;
+	u8		pno_inited;
 	pno_nlo_info_t	*pnlo_info;
 	pno_scan_info_t	*pscan_info;
 	pno_ssid_list_t	*pno_ssid_list;
@@ -332,7 +337,7 @@ struct pwrctrl_priv
 	u8		pwr_state_check_cnts;
 
 	int 		ps_flag; /* used by autosuspend */
-
+	
 	rt_rf_power_state	rf_pwrstate;//cur power state, only for IPS
 	//rt_rf_power_state 	current_rfpwrstate;
 	rt_rf_power_state	change_rfpwrstate;
@@ -352,7 +357,7 @@ struct pwrctrl_priv
 	struct early_suspend early_suspend;
 	u8 do_late_resume;
 	#endif //CONFIG_HAS_EARLYSUSPEND
-
+	
 	#ifdef CONFIG_ANDROID_POWER
 	android_early_suspend_t early_suspend;
 	u8 do_late_resume;
@@ -376,7 +381,7 @@ struct pwrctrl_priv
 		/*DBG_871X("%s _rtw_set_pwr_state_check_timer(%p, %d)\n", __FUNCTION__, (pwrctl), (ms));*/ \
 		_set_timer(&(pwrctl)->pwr_state_check_timer, (ms)); \
 	} while(0)
-
+	
 #define rtw_set_pwr_state_check_timer(pwrctl) \
 	_rtw_set_pwr_state_check_timer((pwrctl), (pwrctl)->pwr_state_check_interval)
 
@@ -398,8 +403,6 @@ extern void cpwm_int_hdl(PADAPTER padapter, struct reportpwrstate_parm *preportp
 extern void LPS_Leave_check(PADAPTER padapter);
 #endif
 
-extern void rtw_set_ps_mode(PADAPTER padapter, u8 ps_mode, u8 smart_ps, u8 bcn_ant_mode, const char *msg);
-extern void rtw_set_rpwm(_adapter * padapter, u8 val8);
 extern void LeaveAllPowerSaveMode(PADAPTER Adapter);
 extern void LeaveAllPowerSaveModeDirect(PADAPTER Adapter);
 #ifdef CONFIG_IPS
@@ -425,7 +428,9 @@ int rtw_fw_ps_state(PADAPTER padapter);
 s32 LPS_RF_ON_check(PADAPTER padapter, u32 delay_ms);
 void LPS_Enter(PADAPTER padapter, const char *msg);
 void LPS_Leave(PADAPTER padapter, const char *msg);
-void	traffic_check_for_leave_lps(PADAPTER padapter, u8 tx, u32 tx_packets);
+void traffic_check_for_leave_lps(PADAPTER padapter, u8 tx, u32 tx_packets);
+void rtw_set_ps_mode(PADAPTER padapter, u8 ps_mode, u8 smart_ps, u8 bcn_ant_mode, const char *msg);
+void rtw_set_rpwm(_adapter * padapter, u8 val8);
 #endif
 
 #ifdef CONFIG_RESUME_IN_WORKQUEUE
@@ -459,3 +464,4 @@ void rtw_ps_deny_cancel(PADAPTER padapter, PS_DENY_REASON reason);
 u32 rtw_ps_deny_get(PADAPTER padapter);
 
 #endif  //__RTL871X_PWRCTRL_H_
+

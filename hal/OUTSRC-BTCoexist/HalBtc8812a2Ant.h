@@ -12,6 +12,9 @@
 #define	BT_INFO_8812A_2ANT_B_SCO_ESCO				BIT1
 #define	BT_INFO_8812A_2ANT_B_CONNECTION				BIT0
 
+#define	BT_INFO_8812A_2ANT_A2DP_BASIC_RATE(_BT_INFO_EXT_)	\
+		(((_BT_INFO_EXT_&BIT0))? TRUE:FALSE)
+
 #define		BTC_RSSI_COEX_THRESH_TOL_8812A_2ANT		2
 
 typedef enum _BT_INFO_SRC_8812A_2ANT{
@@ -43,8 +46,9 @@ typedef enum _BT_8812A_2ANT_COEX_ALGO{
 	BT_8812A_2ANT_COEX_ALGO_PANEDR_A2DP		= 0x8,
 	BT_8812A_2ANT_COEX_ALGO_PANEDR_HID		= 0x9,
 	BT_8812A_2ANT_COEX_ALGO_HID_A2DP_PANEDR	= 0xa,
-	BT_8812A_2ANT_COEX_ALGO_HID_A2DP		= 0xb,
-	BT_8812A_2ANT_COEX_ALGO_MAX				= 0xc
+	BT_8812A_2ANT_COEX_ALGO_HID_A2DP_PANHS	= 0xb,
+	BT_8812A_2ANT_COEX_ALGO_HID_A2DP		= 0xc,
+	BT_8812A_2ANT_COEX_ALGO_MAX				= 0xd
 }BT_8812A_2ANT_COEX_ALGO,*PBT_8812A_2ANT_COEX_ALGO;
 
 typedef struct _COEX_DM_8812A_2ANT{
@@ -60,10 +64,15 @@ typedef struct _COEX_DM_8812A_2ANT{
 	u1Byte		psTdmaPara[5];
 	u1Byte		psTdmaDuAdjType;
 	BOOLEAN		bAutoTdmaAdjust;
+	BOOLEAN		bAutoTdmaAdjustLowRssi;
 	BOOLEAN		bPrePsTdmaOn;
 	BOOLEAN		bCurPsTdmaOn;
 	BOOLEAN		bPreBtAutoReport;
 	BOOLEAN		bCurBtAutoReport;
+	u1Byte		preLps;
+	u1Byte		curLps;
+	u1Byte		preRpwm;
+	u1Byte		curRpwm;
 
 	// sw mechanism
 	BOOLEAN		bPreRfRxLpfShrink;
@@ -139,8 +148,13 @@ typedef struct _COEX_STA_8812A_2ANT{
 // The following is interface which will notify coex module.
 //===========================================
 VOID
-EXhalbtc8812a2ant_InitHwConfig(
+EXhalbtc8812a2ant_PowerOnSetting(
 	IN	PBTC_COEXIST		pBtCoexist
+	);
+VOID
+EXhalbtc8812a2ant_InitHwConfig(
+	IN	PBTC_COEXIST		pBtCoexist,
+	IN	BOOLEAN				bWifiOnly
 	);
 VOID
 EXhalbtc8812a2ant_InitCoexDm(
@@ -201,3 +215,4 @@ EXhalbtc8812a2ant_DbgControl(
 	IN	u1Byte				opLen,
 	IN	pu1Byte 			pData
 	);
+

@@ -1,7 +1,7 @@
 /******************************************************************************
  *
  * Copyright(c) 2007 - 2011 Realtek Corporation. All rights reserved.
- *
+ *                                        
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of version 2 of the GNU General Public License as
  * published by the Free Software Foundation.
@@ -17,7 +17,7 @@
  *
  *
  ******************************************************************************/
-#ifndef	__RTW_RF_H_
+#ifndef	__RTW_RF_H_ 
 #define __RTW_RF_H_
 
 
@@ -49,11 +49,11 @@
 
 //Country codes
 #define USA							0x555320
-#define EUROPE						0x1 //temp, should be provided later
-#define JAPAN						0x2 //temp, should be provided later
+#define EUROPE						0x1 //temp, should be provided later	
+#define JAPAN						0x2 //temp, should be provided later	
 
 struct	regulatory_class {
-	u32	starting_freq;					//MHz,
+	u32	starting_freq;					//MHz, 
 	u8	channel_set[MAX_CHANNEL_NUM];
 	u8	channel_cck_power[MAX_CHANNEL_NUM];//dbm
 	u8	channel_ofdm_power[MAX_CHANNEL_NUM];//dbm
@@ -155,20 +155,6 @@ typedef enum _PROTECTION_MODE{
 	PROTECTION_MODE_FORCE_DISABLE = 2,
 }PROTECTION_MODE, *PPROTECTION_MODE;
 
-#define	LDPC_VHT_ENABLE_RX			BIT0
-#define	LDPC_VHT_ENABLE_TX			BIT1
-#define	LDPC_VHT_TEST_TX_ENABLE		BIT2
-#define	LDPC_VHT_CAP_TX				BIT3
-
-#define	STBC_VHT_ENABLE_RX			BIT0
-#define	STBC_VHT_ENABLE_TX			BIT1
-#define	STBC_VHT_TEST_TX_ENABLE		BIT2
-#define	STBC_VHT_CAP_TX				BIT3
-
-#define	BEAMFORMING_VHT_BEAMFORMER_ENABLE	BIT0	// Declare our NIC supports beamformer
-#define	BEAMFORMING_VHT_BEAMFORMEE_ENABLE	BIT1	// Declare our NIC supports beamformee
-#define	BEAMFORMING_VHT_BEAMFORMER_TEST		BIT2	// Transmiting Beamforming no matter the target supports it or not
-
 /* 2007/11/15 MH Define different RF type. */
 typedef	enum _RT_RF_TYPE_DEFINITION
 {
@@ -186,3 +172,4 @@ u32 rtw_freq2ch(u32 freq);
 
 
 #endif //_RTL8711_RF_H_
+

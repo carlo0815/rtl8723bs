@@ -14,7 +14,7 @@ static struct country_code_to_enum_rd allCountries[] = {
 	{COUNTRY_CODE_USER, "RD"},
 };
 
-/*
+/* 
  * REG_RULE(freq start, freq end, bandwidth, max gain, eirp, reg_flags)
  */
 
@@ -268,10 +268,15 @@ static void _rtw_reg_apply_radar_flags(struct wiphy *wiphy)
 		if (!_rtw_is_radar_freq(ch->center_freq))
 			continue;
 #ifdef CONFIG_DFS
-		if (!(ch->flags & IEEE80211_CHAN_DISABLED))
-			ch->flags |= IEEE80211_CHAN_RADAR |
-			    IEEE80211_CHAN_NO_IBSS;
-#endif
+		if (!(ch->flags & IEEE80211_CHAN_DISABLED)) {
+			ch->flags |= IEEE80211_CHAN_RADAR;
+			#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,14,0))
+			ch->flags |= (IEEE80211_CHAN_NO_IBSS|IEEE80211_CHAN_PASSIVE_SCAN);
+			#else
+			ch->flags |= IEEE80211_CHAN_NO_IR;
+			#endif
+		}
+#endif //CONFIG_DFS
 
 #if 0
 		/*
@@ -354,12 +359,19 @@ static void _rtw_reg_apply_flags(struct wiphy *wiphy)
 			    rtw_ieee80211_channel_to_frequency(channel,
 							       IEEE80211_BAND_5GHZ);
 
+
 		ch = ieee80211_get_channel(wiphy, freq);
 		if (ch) {
-			if (channel_set[i].ScanType == SCAN_PASSIVE)
-				ch->flags = IEEE80211_CHAN_PASSIVE_SCAN;
-			else
+			if (channel_set[i].ScanType == SCAN_PASSIVE) {
+				#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,14,0))
+				ch->flags = (IEEE80211_CHAN_NO_IBSS|IEEE80211_CHAN_PASSIVE_SCAN);
+				#else
+				ch->flags = IEEE80211_CHAN_NO_IR;
+				#endif
+			}
+			else {
 				ch->flags = 0;
+			}
 		}
 	}
 
@@ -474,9 +486,9 @@ static const struct ieee80211_regdomain *_rtw_regdomain_select(struct
 #endif
 }
 
-static int _rtw_regd_init_wiphy(struct rtw_regulatory *reg,
+static void _rtw_regd_init_wiphy(struct rtw_regulatory *reg,
 				struct wiphy *wiphy,
-				int (*reg_notifier) (struct wiphy * wiphy,
+				void (*reg_notifier) (struct wiphy * wiphy,
 						     struct regulatory_request *
 						     request))
 {
@@ -484,9 +496,15 @@ static int _rtw_regd_init_wiphy(struct rtw_regulatory *reg,
 
 	wiphy->reg_notifier = reg_notifier;
 
+	#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,14,0))
 	wiphy->flags |= WIPHY_FLAG_CUSTOM_REGULATORY;
 	wiphy->flags &= ~WIPHY_FLAG_STRICT_REGULATORY;
 	wiphy->flags &= ~WIPHY_FLAG_DISABLE_BEACON_HINTS;
+	#else
+	wiphy->regulatory_flags |= REGULATORY_CUSTOM_REG;
+	wiphy->regulatory_flags &= ~REGULATORY_STRICT_REG;
+	wiphy->regulatory_flags &= ~REGULATORY_DISABLE_BEACON_HINTS;
+	#endif
 
 	regd = _rtw_regdomain_select(reg);
 	wiphy_apply_custom_regulatory(wiphy, regd);
@@ -495,7 +513,6 @@ static int _rtw_regd_init_wiphy(struct rtw_regulatory *reg,
 	_rtw_reg_apply_flags(wiphy);
 	_rtw_reg_apply_radar_flags(wiphy);
 	_rtw_reg_apply_world_flags(wiphy, NL80211_REGDOM_SET_BY_DRIVER, reg);
-	return 0;
 }
 
 static struct country_code_to_enum_rd *_rtw_regd_find_country(u16 countrycode)
@@ -510,7 +527,7 @@ static struct country_code_to_enum_rd *_rtw_regd_find_country(u16 countrycode)
 }
 
 int rtw_regd_init(_adapter * padapter,
-		  int (*reg_notifier) (struct wiphy * wiphy,
+		  void (*reg_notifier) (struct wiphy * wiphy,
 				       struct regulatory_request * request))
 {
 	//struct registry_priv  *registrypriv = &padapter->registrypriv;
@@ -536,14 +553,12 @@ int rtw_regd_init(_adapter * padapter,
 	return 0;
 }
 
-int rtw_reg_notifier(struct wiphy *wiphy, struct regulatory_request *request)
+void rtw_reg_notifier(struct wiphy *wiphy, struct regulatory_request *request)
 {
-	struct wireless_dev *rtw_wdev = wiphy_to_wdev(wiphy);
 	struct rtw_regulatory *reg = NULL;
-	_adapter *padapter = wiphy_to_adapter(wiphy);
 
 	DBG_8192C("%s\n", __func__);
 
-	return _rtw_reg_notifier_apply(wiphy, request, reg);
+	_rtw_reg_notifier_apply(wiphy, request, reg);
 }
 #endif //CONFIG_IOCTL_CFG80211

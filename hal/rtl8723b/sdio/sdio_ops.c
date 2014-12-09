@@ -174,7 +174,7 @@ _func_exit_;
 u16 sdio_read16(struct intf_hdl *pintfhdl, u32 addr)
 {
 	u32 ftaddr;
-	u16 val;
+	u16 val;	
 
 _func_enter_;
 	ftaddr = _cvrt2ftaddr(addr, NULL, NULL);
@@ -820,7 +820,7 @@ s32 sdio_local_write(
 }
 
 u8 SdioLocalCmd52Read1Byte(PADAPTER padapter, u32 addr)
-{
+{	
 	u8 val = 0;
 	struct intf_hdl * pintfhdl=&padapter->iopriv.intf;
 
@@ -831,7 +831,7 @@ u8 SdioLocalCmd52Read1Byte(PADAPTER padapter, u32 addr)
 }
 
 u16 SdioLocalCmd52Read2Byte(PADAPTER padapter, u32 addr)
-{
+{	
 	u16 val = 0;
 	struct intf_hdl * pintfhdl=&padapter->iopriv.intf;
 
@@ -844,7 +844,7 @@ u16 SdioLocalCmd52Read2Byte(PADAPTER padapter, u32 addr)
 }
 
 u32 SdioLocalCmd52Read4Byte(PADAPTER padapter, u32 addr)
-{
+{	
 	u32 val = 0;
 	struct intf_hdl * pintfhdl=&padapter->iopriv.intf;
 
@@ -858,7 +858,7 @@ u32 SdioLocalCmd52Read4Byte(PADAPTER padapter, u32 addr)
 
 u32 SdioLocalCmd53Read4Byte(PADAPTER padapter, u32 addr)
 {
-
+	
 	u8 bMacPwrCtrlOn;
 	u32 val = 0;
 	struct intf_hdl * pintfhdl=&padapter->iopriv.intf;
@@ -1110,7 +1110,9 @@ void InitInterrupt8723BSdio(PADAPTER padapter)
 	pHalData = GET_HAL_DATA(padapter);
 	pHalData->sdio_himr = (u32)(			\
 								SDIO_HIMR_RX_REQUEST_MSK			|
-//								SDIO_HIMR_AVAL_MSK					|
+#ifdef CONFIG_SDIO_TX_ENABLE_AVAL_INT
+								SDIO_HIMR_AVAL_MSK					|
+#endif
 //								SDIO_HIMR_TXERR_MSK				|
 //								SDIO_HIMR_RXERR_MSK				|
 //								SDIO_HIMR_TXFOVW_MSK				|
@@ -1296,7 +1298,7 @@ u8 CheckIPSStatus(PADAPTER padapter)
 {
 	DBG_871X("%s(): Read 0x100=0x%02x 0x86=0x%02x\n", __func__,
 		rtw_read8(padapter, 0x100),rtw_read8(padapter, 0x86));
-
+	
 	if (rtw_read8(padapter, 0x100) == 0xEA)
 		return _TRUE;
 	else
@@ -1315,7 +1317,7 @@ void DisableInterruptButCpwm28723BSdio(PADAPTER padapter)
 #endif
 	sdio_local_read(padapter, SDIO_REG_HIMR, 4, (u8*)&tmp);
 	DBG_871X("DisableInterruptButCpwm28723BSdio(): Read SDIO_REG_HIMR: 0x%08x\n", tmp);
-
+	
 	himr = cpu_to_le32(SDIO_HIMR_DISABLED)|SDIO_HIMR_CPWM2_MSK;
 	sdio_local_write(padapter, SDIO_REG_HIMR, 4, (u8*)&himr);
 
@@ -1541,18 +1543,13 @@ static void sd_rxhandler(PADAPTER padapter, struct recv_buf *precvbuf)
 	precvpriv = &padapter->recvpriv;
 	ppending_queue = &precvpriv->recv_buf_pending_queue;
 
-	if (_rtw_queue_empty(ppending_queue) == _TRUE)
-	{
-		//3 1. enqueue recvbuf
-		rtw_enqueue_recvbuf(precvbuf, ppending_queue);
+	//3 1. enqueue recvbuf
+	rtw_enqueue_recvbuf(precvbuf, ppending_queue);
 
-		//3 2. schedule tasklet
+	//3 2. schedule tasklet
 #ifdef PLATFORM_LINUX
-		tasklet_schedule(&precvpriv->recv_tasklet);
+	tasklet_schedule(&precvpriv->recv_tasklet);
 #endif
-	} else
-		rtw_enqueue_recvbuf(precvbuf, ppending_queue);
-
 }
 
 void sd_int_dpc(PADAPTER padapter)
@@ -1567,6 +1564,24 @@ void sd_int_dpc(PADAPTER padapter)
 	dvobj = adapter_to_dvobj(padapter);
 	pwrctl = dvobj_to_pwrctl(dvobj);
 
+#ifdef CONFIG_SDIO_TX_ENABLE_AVAL_INT
+	if (phal->sdio_hisr & SDIO_HISR_AVAL)
+	{
+		//_irqL irql;
+		u8	freepage[4];
+
+		_sdio_local_read(padapter, SDIO_REG_FREE_TXPG, 4, freepage);
+		//_enter_critical_bh(&phal->SdioTxFIFOFreePageLock, &irql);
+		//_rtw_memcpy(phal->SdioTxFIFOFreePage, freepage, 4);
+		//_exit_critical_bh(&phal->SdioTxFIFOFreePageLock, &irql);
+		//DBG_871X("SDIO_HISR_AVAL, Tx Free Page = 0x%x%x%x%x\n",
+		//	freepage[0],
+		//	freepage[1],
+		//	freepage[2],
+		//	freepage[3]);
+		_rtw_up_sema(&(padapter->xmitpriv.xmit_sema));
+	}
+#endif
 	if (phal->sdio_hisr & SDIO_HISR_CPWM1)
 	{
 		struct reportpwrstate_parm report;
@@ -1635,7 +1650,7 @@ void sd_int_dpc(PADAPTER padapter)
 			_set_workitem(&padapter->evtpriv.c2h_wk);
 		}
 	}
-#endif
+#endif	
 
 	if (phal->sdio_hisr & SDIO_HISR_RXFOVW)
 	{
@@ -1663,7 +1678,7 @@ void sd_int_dpc(PADAPTER padapter)
 #else
 				precvbuf = sd_recv_rxfifo(padapter, phal->SdioRxFIFOSize);
 				if (precvbuf)
-					sd_rxhandler(padapter, precvbuf);
+				     	sd_rxhandler(padapter, precvbuf);
 				else
 				{
 					alloc_fail_time++;
@@ -1738,14 +1753,14 @@ u8 HalQueryTxBufferStatus8723BSdio(PADAPTER padapter)
 {
 	PHAL_DATA_TYPE phal;
 	u32 NumOfFreePage;
-//	_irqL irql;
+	//_irqL irql;
 
 
 	phal = GET_HAL_DATA(padapter);
 
 	NumOfFreePage = SdioLocalCmd53Read4Byte(padapter, SDIO_REG_FREE_TXPG);
 
-//	_enter_critical_bh(&phal->SdioTxFIFOFreePageLock, &irql);
+	//_enter_critical_bh(&phal->SdioTxFIFOFreePageLock, &irql);
 	_rtw_memcpy(phal->SdioTxFIFOFreePage, &NumOfFreePage, 4);
 	RT_TRACE(_module_hci_ops_c_, _drv_notice_,
 			("%s: Free page for HIQ(%#x),MIDQ(%#x),LOWQ(%#x),PUBQ(%#x)\n",
@@ -1754,12 +1769,23 @@ u8 HalQueryTxBufferStatus8723BSdio(PADAPTER padapter)
 			phal->SdioTxFIFOFreePage[MID_QUEUE_IDX],
 			phal->SdioTxFIFOFreePage[LOW_QUEUE_IDX],
 			phal->SdioTxFIFOFreePage[PUBLIC_QUEUE_IDX]));
-//	_exit_critical_bh(&phal->SdioTxFIFOFreePageLock, &irql);
+	//_exit_critical_bh(&phal->SdioTxFIFOFreePageLock, &irql);
 
 	return _TRUE;
 }
 
-#ifdef CONFIG_WOWLAN
+//
+//	Description:
+//		Query SDIO Local register to get the current number of TX OQT Free Space.
+//
+u8 HalQueryTxOQTBufferStatus8723BSdio(PADAPTER padapter)
+{
+	HAL_DATA_TYPE *pHalData = GET_HAL_DATA(padapter);
+	pHalData->SdioTxOQTFreeSpace = SdioLocalCmd52Read1Byte(padapter, SDIO_REG_OQT_FREE_PG);
+	return _TRUE;
+}
+
+#if defined(CONFIG_WOWLAN) || defined(CONFIG_AP_WOWLAN) 
 u8 RecvOnePkt(PADAPTER padapter, u32 size)
 {
 	struct recv_buf *precvbuf;
@@ -1797,3 +1823,4 @@ u8 RecvOnePkt(PADAPTER padapter, u32 size)
 	return res;
 }
 #endif //CONFIG_WOWLAN
+

@@ -116,7 +116,7 @@ typedef struct txdesc_88e
 
 	//Offset 4
 	u32 macid:6;
-	u32 rsvd0406:2;
+	u32 rsvd0406:2;	
 	u32 qsel:5;
 	u32 rd_nav_ext:1;
 	u32 lsig_txop_en:1;
@@ -166,7 +166,7 @@ typedef struct txdesc_88e
 	u32 cts2self:1;
 	u32 rtsen:1;
 	u32 hw_rts_en:1;
-	u32 port_id:1;
+	u32 port_id:1;	
 	u32 pwr_status:3;
 	u32 wait_dcts:1;
 	u32 cts2ap_en:1;
@@ -249,7 +249,10 @@ struct txrpt_ccx_88e {
 #define txrpt_ccx_sw_88e(txrpt_ccx) ((txrpt_ccx)->sw0 + ((txrpt_ccx)->sw1<<8))
 #define txrpt_ccx_qtime_88e(txrpt_ccx) ((txrpt_ccx)->ccx_qtime0+((txrpt_ccx)->ccx_qtime1<<8))
 
-void rtl8188e_fill_fake_txdesc(PADAPTER	padapter,u8*pDesc,u32 BufferLen,u8 IsPsPoll,u8	IsBTQosNull);
+#define SET_TX_DESC_SEC_TYPE_8188E(__pTxDesc, __Value) SET_BITS_TO_LE_4BYTE(__pTxDesc+4, 22, 2, __Value)
+
+void rtl8188e_fill_fake_txdesc(PADAPTER	padapter,u8*pDesc,u32 BufferLen,
+		u8 IsPsPoll,u8	IsBTQosNull, u8 bDataFrame);
 #ifdef CONFIG_SDIO_HCI
 s32 rtl8188es_init_xmit_priv(PADAPTER padapter);
 void rtl8188es_free_xmit_priv(PADAPTER padapter);
@@ -278,10 +281,10 @@ s32 rtl8188eu_xmitframe_complete(_adapter *padapter, struct xmit_priv *pxmitpriv
 #ifdef CONFIG_PCI_HCI
 s32 rtl8188ee_init_xmit_priv(PADAPTER padapter);
 void rtl8188ee_free_xmit_priv(PADAPTER padapter);
-struct xmit_buf *rtl8188ee_dequeue_xmitbuf(struct rtw_tx_ring *ring);
 void	rtl8188ee_xmitframe_resume(_adapter *padapter);
 s32 rtl8188ee_hal_xmit(PADAPTER padapter, struct xmit_frame *pxmitframe);
 s32 rtl8188ee_mgnt_xmit(PADAPTER padapter, struct xmit_frame *pmgntframe);
+s32	rtl8188ee_hal_xmitframe_enqueue(_adapter *padapter, struct xmit_frame *pxmitframe);
 void rtl8188ee_xmit_tasklet(void *priv);
 #endif
 
@@ -301,3 +304,4 @@ void handle_txrpt_ccx_88e(_adapter *adapter, u8 *buf);
 
 void _dbg_dump_tx_info(_adapter	*padapter,int frame_tag,struct tx_desc *ptxdesc);
 #endif //__RTL8188E_XMIT_H__
+
