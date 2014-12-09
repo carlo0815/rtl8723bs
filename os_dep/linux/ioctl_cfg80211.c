@@ -377,7 +377,8 @@ struct cfg80211_bss *rtw_cfg80211_inform_bss(_adapter *padapter, struct wlan_net
 	u8 *notify_ie;
 	size_t notify_ielen;
 	s32 notify_signal;
-	u8 buf[MAX_BSSINFO_LEN], *pbuf;
+	static u8 buf[MAX_BSSINFO_LEN];
+	u8 *pbuf;
 	size_t len,bssinf_len=0;
 	struct rtw_ieee80211_hdr *pwlanhdr;
 	unsigned short *fctrl;
