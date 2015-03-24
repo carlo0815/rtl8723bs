@@ -25,7 +25,7 @@
 #if 1
 #include "hal_data.h"
 #else
-#include "../hal/OUTSRC/odm_precomp.h"
+#include "odm_precomp.h"
 #endif
 
 //include HAL Related header after HAL Related compiling flags 
