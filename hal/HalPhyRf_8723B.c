@@ -2010,11 +2010,13 @@ phy_IQCalibrate_8723B(
 #endif
 #endif
 
+#if MP_DRIVER
 if( pAdapter->registrypriv.mp_mode == 1 && pAdapter->mppriv.mode == 3 )
 {
 		DBG_871X("%s() :return !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n",__func__);
 		return;
 }
+#endif
 
 	// Note: IQ calibration must be performed after loading 
 	//		PHY_REG.txt , and radio_a, radio_b.txt	
@@ -2348,11 +2350,13 @@ phy_LCCalibrate_8723B(
 #if !(DM_ODM_SUPPORT_TYPE & ODM_AP)
 		PADAPTER pAdapter = pDM_Odm->Adapter;
 #endif	
+#if MP_DRIVER
 	if( pAdapter->registrypriv.mp_mode == 1 && pAdapter->mppriv.mode == 3 )
 	{
 		DBG_871X("%s() :return !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n",__func__);
 		return;
 	}
+#endif
 
 	//Check continuous TX and Packet TX
 	tmpReg = ODM_Read1Byte(pDM_Odm, 0xd03);
