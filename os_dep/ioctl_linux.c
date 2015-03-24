@@ -584,7 +584,7 @@ static char *translate_scan(_adapter *padapter,
 	//parsing WPA/WPA2 IE
 	if (pnetwork->network.Reserved[0] != 2) // Probe Request
 	{
-		u8 buf[MAX_WPA_IE_LEN*2];
+		static u8 buf[MAX_WPA_IE_LEN*2];
 		u8 wpa_ie[255],rsn_ie[255];
 		u16 wpa_len=0,rsn_len=0;
 		u8 *p;
