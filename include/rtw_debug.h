@@ -232,6 +232,7 @@ extern void rtl871x_cedbg(const char *fmt, ...);
 		} \
 	}while(0)
 #else
+#define DBG_871X_SEL(sel, fmt, arg...) \
 	do {\
 		if (sel == RTW_DBGDUMP)\
 			_DBG_871X_LEVEL(_drv_always_, fmt, ##arg); \
@@ -252,6 +253,7 @@ extern void rtl871x_cedbg(const char *fmt, ...);
 		} \
 	}while(0)
 #else
+#define DBG_871X_SEL_NL(sel, fmt, arg...) \
 	do {\
 		if (sel == RTW_DBGDUMP)\
 			DBG_871X_LEVEL(_drv_always_, fmt, ##arg); \
